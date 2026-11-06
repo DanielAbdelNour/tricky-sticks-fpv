@@ -16,6 +16,18 @@ local EV_NAMES = { "ROLL", "FRONT FLIP", "BACK FLIP", "CRASH", "ARMED", "DISARME
                    "NEW BEST" }
 
 local C, H                       -- colours and font heights, set on first draw
+local btn                        -- STATUS page test button: x, y, w, h (full screen)
+local testT, quietUntil = -1e9, 0
+
+-- Sound test (STATUS page): a beep, an announcer clip, then a number in the
+-- radio's own voice (from /SOUNDS/<language>). Which ones you hear shows
+-- where sound stops.
+local function soundTest(R, now)
+  playTone(1000, 150, 100)
+  playFile(R.cfg.VOICE_DIR .. "arm/1.wav")
+  playNumber(42, 0)
+  testT, quietUntil = now, now + 1           -- ignore the ENTER release
+end
 
 local function setup()
   local rgb = lcd.RGB
@@ -183,11 +195,12 @@ local function drawSummary(R, w, h, full)
   text(10, y, "SCORE", SMLSIZE, C.dim)
   text(10, y + S, int(D.score), MIDSIZE, C.text)
   local x2 = floor(w / 3) + 10
-  text(x2, y, "BEST", SMLSIZE, C.dim)
-  text(x2, y + S, int(D.best), MIDSIZE, C.text)
-  if D.newBest and not D.armed then
-    text(x2 + width(int(D.best), MIDSIZE) + 10, y + S, "NEW!", MIDSIZE + BLINK, C.accent)
-  end
+  local best, isNew = int(D.best), D.newBest and not D.armed
+  local nx = x2 + width(best, MIDSIZE) + 10
+  local newFits = nx + width("NEW!", MIDSIZE) <= floor(2 * w / 3)
+  text(x2, y, isNew and not newFits and "NEW BEST" or "BEST", SMLSIZE, isNew and C.accent or C.dim)
+  text(x2, y + S, best, MIDSIZE, C.text)
+  if isNew and newFits then text(nx, y + S, "NEW!", MIDSIZE + BLINK, C.accent) end
   local secs = floor(D.armed and (getTime() / 100 - D.armT) or D.flightTime)
   text(floor(2 * w / 3) + 10, y, "TIME", SMLSIZE, C.dim)
   text(floor(2 * w / 3) + 10, y + S, floor(secs / 60) .. ":" .. string.format("%02d", secs % 60),
@@ -250,6 +263,20 @@ local function drawStatus(R, w, h, full)
   y = y + step
   if R.lastClip then line(10, y, w - 20, "LAST CLIP", R.lastClip) ; y = y + step end
   if R.D.pending ~= 0 then text(10, y, "CHECKING TRICK...", SMLSIZE + BLINK, C.accent) end
+  if full then                                   -- sound test button, bottom right
+    btn = nil
+    local S = H[SMLSIZE]
+    local label = "TEST SOUND"
+    local bw, bh = width(label, SMLSIZE) + 28, S + 12
+    local bx, by = w - 10 - bw, h - S - 8 - bh - 6
+    if by > y + S then
+      btn = { bx, by, bw, bh }
+      rect(bx, by, bw, bh, getTime() / 100 - testT < 4 and C.accent or C.line)
+      text(bx + 14, by + 6, label, SMLSIZE, C.text)
+      local hint = getTime() / 100 - testT < 4 and "BEEP, CLIP, \"42\"" or "TAP OR HOLD ENTER"
+      text(bx - 10, by + 6, hint, SMLSIZE + RIGHT, C.dim)
+    end
+  end
   footer(R, w, h, full)
 end
 
@@ -298,6 +325,14 @@ return function(R, zone, event, touch)
   local big = w >= 300 and h >= 200
   if not big then return drawCompact(R, w, h) end
 
+  local now = getTime() / 100
+  if full and R.page == 3 and (event == EVT_VIRTUAL_ENTER_LONG or (event == EVT_TOUCH_TAP
+      and btn and touch and touch.x >= btn[1] and touch.x < btn[1] + btn[3]
+      and touch.y >= btn[2] and touch.y < btn[2] + btn[4])) then
+    soundTest(R, now)
+    event = 0
+  end
+  if event == EVT_VIRTUAL_ENTER and now < quietUntil then event = 0 end
   if full and event ~= 0 then
     if event == EVT_VIRTUAL_NEXT or event == EVT_VIRTUAL_ENTER or event == EVT_TOUCH_TAP
         or (touch and touch.swipeLeft) then
