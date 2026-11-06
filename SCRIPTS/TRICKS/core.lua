@@ -32,7 +32,8 @@ M.EV_ORBIT  = 11  -- banked 360 turn
 M.EV_STYLE  = 12  -- freestyle aggression points
 M.EV_BEST   = 13  -- passed the saved high score this flight
 M.EV_MATTY  = 14  -- Matty flip: back flip with a pause while inverted
-M.NUM_EV    = 14
+M.EV_JUICY  = 15  -- juicy flick: half flip to inverted, then back the way it came
+M.NUM_EV    = 15
 
 local abs, cos, rad, deg, floor = math.abs, math.cos, math.rad, math.deg, math.floor
 
@@ -49,7 +50,7 @@ local NCH = 6
 -- Extra entries in S.msgs (after the event codes) and the tilt thresholds in
 -- S.zt. Kept in arrays so the state table stays at <= 64 fields (a smaller
 -- hash part: memory is tight on the radio).
-local MSG_DOUBLE, MSG_TRIPLE, MSG_FULLSEND, MSG_SCOREMSG = 15, 16, 17, 18
+local MSG_DOUBLE, MSG_TRIPLE, MSG_FULLSEND, MSG_SCOREMSG = 16, 17, 18, 19
 local Z_INV, Z_UP, Z_CRASH, Z_CRASHCLR, Z_TURTLE, Z_TURTLECLR = 1, 2, 3, 4, 5, 6
 
 -- Betaflight appends a status char to the CRSF flight mode when disarmed:
@@ -149,6 +150,7 @@ function M.new(cfg)
       [M.EV_LOOP] = up(cfg.MSG_LOOP), [M.EV_SPIN] = up(cfg.MSG_SPIN),
       [M.EV_ORBIT] = up(cfg.MSG_ORBIT), [M.EV_STYLE] = up(cfg.MSG_STYLE),
       [M.EV_BEST] = up(cfg.MSG_BEST), [M.EV_MATTY] = up(cfg.MSG_MATTY),
+      [M.EV_JUICY] = up(cfg.MSG_JUICY),
       [MSG_DOUBLE] = up(cfg.MSG_DOUBLE), [MSG_TRIPLE] = up(cfg.MSG_TRIPLE),
       [MSG_FULLSEND] = up(cfg.MSG_FULLSEND), [MSG_SCOREMSG] = up(cfg.MSG_SCORE),
     },
@@ -160,11 +162,11 @@ function M.new(cfg)
       [M.EV_ROLL] = cfg.POINTS_ROLL, [M.EV_FRONT] = cfg.POINTS_FRONTFLIP,
       [M.EV_BACK] = cfg.POINTS_BACKFLIP, [M.EV_LOOP] = cfg.POINTS_LOOP,
       [M.EV_SPIN] = cfg.POINTS_SPIN, [M.EV_ORBIT] = cfg.POINTS_ORBIT,
-      [M.EV_MATTY] = cfg.POINTS_MATTY,
+      [M.EV_MATTY] = cfg.POINTS_MATTY, [M.EV_JUICY] = cfg.POINTS_JUICY,
     },
     counts = {},                 -- per-flight event counts (summary)
     epEnd = { -1e9, -1e9, -1e9, -1e9 }, epIdx = 1, inInv = false,
-    hangT = 0, hangOkT = -1e9,
+    hangT = 0, hangOkT = -1e9, jfDir = 0,
     lastT = nil,
     armed = false, armT = 0, score = 0, turtle = false, turtleChecked = false,
     z = 1, lastInvT = -1e9, lastUpT = -1e9, tiltSince = nil,
@@ -279,7 +281,7 @@ local function startFlight(S, t)
   S.cooldownUntil = -1e9
   S.lastInvT, S.lastUpT = -1e9, -1e9
   for i = 1, 4 do S.epEnd[i] = -1e9 end
-  S.hangT, S.hangOkT = 0, -1e9
+  S.hangT, S.hangOkT, S.jfDir = 0, -1e9, 0
   for i = 1, M.NUM_EV do S.counts[i] = 0 end
   S.combo, S.bestCombo, S.lastTrickT = 0, 0, -1e9
   S.bestAnnounced, S.bestQueued, S.newBest = false, false, false
@@ -435,7 +437,7 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
   if p ~= 0 then
     local axis, f = C_PITCH, fp
     if p == M.EV_ROLL then axis, f = C_ROLL, fr elseif p == M.EV_SPIN then axis, f = C_YAW, fy end
-    if p ~= M.EV_LOOP and ss[axis] * S.pendDir >= cfg.MULTI_DEG
+    if p ~= M.EV_LOOP and p ~= M.EV_JUICY and ss[axis] * S.pendDir >= cfg.MULTI_DEG
         and S.pendCount < cfg.MAX_ROTATIONS then
       S.pendCount = S.pendCount + 1
       S.pendT = t
@@ -475,6 +477,28 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
       S.pending = 0
       return event(S, t, M.EV_MISS)
     end
+  end
+
+  -- Juicy flick: pitch commands JUICY_DEG or more one way (direction jfDir),
+  -- then comes back to within JUICY_RETURN_DEG of where it started inside
+  -- JUICY_TIME. A rotation that carries on to CANDIDATE_DEG is an ordinary
+  -- flip instead. No candidate is open meanwhile, so pendT holds when it
+  -- started and pendYaw the pitch commanded in direction jfDir since (spares
+  -- two fields: memory).
+  if S.pending ~= 0 or t < S.cooldownUntil or S.crashLatched then
+    S.jfDir = 0
+  elseif S.jfDir ~= 0 then
+    local acc = S.pendYaw + fp * cfg.MAX_RATE_PITCH * dt * S.jfDir
+    S.pendYaw = acc
+    if acc >= cfg.CANDIDATE_DEG or t - S.pendT > cfg.JUICY_TIME then
+      S.jfDir = 0
+    elseif acc <= cfg.JUICY_RETURN_DEG and t - S.lastThrT <= cfg.THR_RECENT then
+      S.pending, S.pendWin = M.EV_JUICY, S.pendT - cfg.WINDOW
+      S.pendT, S.pendCount, S.pendDir, S.jfDir = t, 1, -S.jfDir, 0
+      clearSticks(S)
+    end
+  elseif abs(ss[C_PITCH]) >= cfg.JUICY_DEG then
+    S.jfDir, S.pendYaw, S.pendT = ss[C_PITCH] > 0 and 1 or -1, abs(ss[C_PITCH]), t
   end
 
   -- Open a candidate

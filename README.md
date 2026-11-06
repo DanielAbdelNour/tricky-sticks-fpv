@@ -8,7 +8,7 @@ NICE ROLL! 10  →  FRONT FLIP! X2  →  DOUBLE ROLL! X3  →  SCORE 120  →  F
 ```
 
 It detects rolls, front/back flips, doubles and triples, power loops, Matty
-flips, yaw spins, orbits, combos, crashes, and rewards aggressive freestyle. It keeps your
+flips, juicy flicks, yaw spins, orbits, combos, crashes, and rewards aggressive freestyle. It keeps your
 high score on the SD card and shows a flight summary on the radio.
 
 It works with stock Betaflight and stock ExpressLRS. The radio writes the text
@@ -102,6 +102,7 @@ with your radio, EdgeTX version and the **MEM** number from the STATUS page.
 | Back flip | 25 | `BACK FLIP!` | same, pitch stick back, throttle low |
 | Power loop | 40 | `POWER LOOP!` | back-pitch rotation (up to 2.5 s) with throttle averaging 50% or more, inverted then upright |
 | Matty flip | 50 | `MATTY FLIP!` | a back flip or loop (up to 2.5 s) that pauses inverted: telemetry inverted with the pitch stick released for 0.3 s or more |
+| Juicy flick | 35 | `JUICY FLICK!` | pitch stick commands 150° one way, then back to within 60° of where it started within 1.5 s; telemetry sees the quad inverted, then upright |
 | Double / triple | ×2 / ×3 | `DOUBLE ROLL!`, `TRIPLE FRONT!` | each extra 360° of stick, capped by how many separate times telemetry saw the quad inverted (for spins: by telemetry yaw) |
 | Yaw spin | 15 | `SPIN!` | yaw stick commands ~300°, telemetry yaw turns 270° or more |
 | Orbit | 30 | `ORBIT!` | telemetry: banked at least 15° and heading turns a full 360° in 1.5–8 s |
@@ -150,6 +151,15 @@ before 0.3 s of it shows up. Two limits: the whole trick has to fit in 2.5 s
 (`LOOP_WINDOW`), and floating inverted with the sticks centred for more than
 1 s (`CRASH_TIME`) counts as a crash, because from the attitude it looks just
 like lying upside down after one.
+
+**Juicy flicks** go out and back: a half flip (forward or back) to inverted
+for a look back, then a flick back the way you came, ending upright. The
+commanded pitch adds up to about zero, so the flip check never sees it. A
+separate check watches for 150° (`JUICY_DEG`) of pitch one way that then
+comes back to within 60° (`JUICY_RETURN_DEG`) of the start within 1.5 s
+(`JUICY_TIME`). A rotation that carries on to 300° is an ordinary flip
+instead. Telemetry then has to confirm the quad went inverted and came back
+upright, as for flips.
 
 **Orbits** without GPS can't be measured around a point. What the script
 measures is a full, continuous, banked 360° turn that takes 1.5–8 s. That's what
@@ -247,8 +257,8 @@ TRICKS              ARMED      LAST FLIGHT       DISARMED     STATUS           D
 SCORE  120     BEST 95         SCORE 120 BEST 120 NEW!        FM OK  ATT 6 HZ  YAW OK
                COMBO X3        ROLL 4 FRONT 2 BACK 1          STICKS OK      MEM 41
 LAST  2X ROLL         1s       LOOP 1 SPIN 2 ORBIT 1          MSP OK   WRITES 14
-STYLE [██████░░░░]  +18        COMBO X3 STYLE 18 MATTY 1      NAME MY WHOOP
-FM ok ATT 6 Hz MSP ok          CRASH 1 TIME 02:34
+STYLE [██████░░░░]  +18        MATTY 1 JUICY 2 COMBO X3       NAME MY WHOOP
+FM ok ATT 6 Hz MSP ok          STYLE 18 CRASH 1 TIME 02:34
 ```
 
 ### Colour radios
@@ -278,6 +288,7 @@ likely to change:
 | `UPRIGHT_TILT` | 60 | You exit flips at a steep angle: raise it. |
 | `SETTLE_FRAC` | 0.25 | Tricks score late because you keep some stick in afterwards: raise it. |
 | `LOOP_THR_AVG` | 0.5 | Power loops register as back flips: lower it. Punchy back flips register as loops: raise it. |
+| `JUICY_DEG` / `JUICY_TIME` | 150° / 1.5 s | Juicy flicks missed: lower `JUICY_DEG` a little, or raise `JUICY_TIME` if you look back for long. |
 | `MATTY_HANG` | 0.3 s | Matty flips register as back flips: lower it (not much under 0.2 s). Ordinary back flips register as Matty flips: raise it. |
 | `SPIN_CONFIRM_DEG` | 270 | Spins show `NO CONFIRM`: lower it. |
 | `ORBIT_MIN_BANK` / `ORBIT_MIN_TIME` | 15° / 1.5 s | Orbits not counted: lower them. Ordinary turns counted: raise them. |

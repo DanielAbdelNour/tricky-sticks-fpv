@@ -13,7 +13,7 @@ local floor = math.floor
 local PAGES = 3
 local EV_NAMES = { "ROLL", "FRONT FLIP", "BACK FLIP", "CRASH", "ARMED", "DISARMED",
                    "NO CONFIRM", "TURTLE", "POWER LOOP", "SPIN", "ORBIT", "STYLE",
-                   "NEW BEST", "MATTY FLIP" }
+                   "NEW BEST", "MATTY FLIP", "JUICY FLICK" }
 
 local C, H                       -- colours and font heights, set on first draw
 
@@ -165,7 +165,7 @@ local function drawLive(R, w, h, full)
   if y + S + M <= bottom then
     local c = D.counts
     local cols = {
-      { "ROLL", c[E.EV_ROLL] }, { "FLIP", c[E.EV_FRONT] + c[E.EV_BACK] + c[E.EV_MATTY] }, { "LOOP", c[E.EV_LOOP] },
+      { "ROLL", c[E.EV_ROLL] }, { "FLIP", c[E.EV_FRONT] + c[E.EV_BACK] + c[E.EV_MATTY] + c[E.EV_JUICY] }, { "LOOP", c[E.EV_LOOP] },
       { "SPIN", c[E.EV_SPIN] }, { "ORBIT", c[E.EV_ORBIT] },
     }
     for i = 1, #cols do stat(10 + floor((i - 1) * (w - 20) / #cols), y, cols[i][1], cols[i][2], MIDSIZE) end
@@ -198,9 +198,9 @@ local function drawSummary(R, w, h, full)
 
   local grid = {
     { "ROLL", c[E.EV_ROLL] }, { "FRONT", c[E.EV_FRONT] }, { "BACK", c[E.EV_BACK] },
-    { "MATTY", c[E.EV_MATTY] }, { "LOOP", c[E.EV_LOOP] }, { "SPIN", c[E.EV_SPIN] },
-    { "ORBIT", c[E.EV_ORBIT] }, { "STYLE", int(D.stylePts) }, { "COMBO", "X" .. D.bestCombo },
-    { "CRASH", c[E.EV_CRASH] },
+    { "MATTY", c[E.EV_MATTY] }, { "JUICY", c[E.EV_JUICY] }, { "LOOP", c[E.EV_LOOP] },
+    { "SPIN", c[E.EV_SPIN] }, { "ORBIT", c[E.EV_ORBIT] }, { "STYLE", int(D.stylePts) },
+    { "COMBO", "X" .. D.bestCombo }, { "CRASH", c[E.EV_CRASH] },
   }
   local bottom = h - S - 8
   local f = MIDSIZE                 -- smaller numbers if three rows don't fit

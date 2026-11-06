@@ -40,6 +40,11 @@ matty|Nice Matty!
 matty|Matty flip, baby!
 matty|Right over it!
 matty|Hang time!
+juicy|Juicy flick!
+juicy|So juicy!
+juicy|Flick it!
+juicy|Snap back!
+juicy|Out and back!
 
 # Doubles and triples
 roll2|Double roll!

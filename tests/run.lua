@@ -495,6 +495,83 @@ test("half back flip that ends upside down on the ground is a crash", function()
   eq(s:count(E.EV_MATTY), 0, "Matty flips")
 end)
 
+-- Half flip one way (pitch), optional look back, then back the way it came
+local function juicy(s, dir, look, stick)
+  stick = stick or 1
+  local secs = 0.3 / (stick * 0.7 + stick ^ 3 * 0.3)   -- 180 deg with RATE_EXPO 0.3
+  s:run(secs, 0, dir * stick, 0.4)
+  if look then s:run(look, 0, 0, 0.3) end
+  s:run(secs, 0, -dir * stick, 0.6)
+end
+
+test("juicy flick: half flip forward and back scores 35", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  juicy(s, 1)
+  s:run(0.3)
+  eq(s.text, "JUICY FLICK! 35", "osd")
+  s:run(1.2)
+  eq(s:count(E.EV_JUICY), 1, "juicy flicks")
+  eq(s:count(E.EV_FRONT) + s:count(E.EV_BACK) + s:count(E.EV_MISS), 0, "nothing else")
+  eq(s.S.score, 35, "score")
+  eq(s.S.counts[E.EV_JUICY], 1, "summary count")
+end)
+
+test("juicy flick: back first, with a look back, slower stick, combo", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  juicy(s, -1); s:run(1.0)
+  eq(s:count(E.EV_JUICY), 1, "back first")
+  juicy(s, 1, 0.4); s:run(1.0)
+  eq(s:count(E.EV_JUICY), 2, "look back")
+  eq(s.text, "JUICY FLICK! X2", "combo")
+  juicy(s, 1, nil, 0.6); s:run(1.5)
+  eq(s:count(E.EV_JUICY), 3, "slower stick")
+end)
+
+test("juicy flick with 5 Hz telemetry and 150 ms latency", function()
+  local s = Sim.new(core, config(), { attHz = 5, latency = 0.15 })
+  s:armAndHover()
+  juicy(s, 1); s:run(1.5)
+  eq(s:count(E.EV_JUICY), 1, "juicy flicks")
+end)
+
+test("a small pitch flick and back is not a juicy flick", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s:run(0.15, 0, 1, 0.4); s:run(0.15, 0, -1, 0.6); s:run(1.5)   -- ~90 deg and back
+  eq(s:count(E.EV_JUICY), 0, "juicy flicks")
+  eq(#s.events, 1, "only the arm event")
+end)
+
+test("juicy flick needs the quad to really go inverted", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s.locked = true
+  juicy(s, 1); s:run(1.5)
+  eq(s:count(E.EV_JUICY), 0, "juicy flicks")
+  eq(s.S.score, 0, "score")
+end)
+
+test("flips, loops and Matty flips are not juicy flicks", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s:run(0.6, 0, 1, 0.3); s:run(1.5)                 -- front flip
+  s:run(0.6, 0, -1, 0.3); s:run(1.5)                -- back flip
+  s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5)  -- power loop
+  matty(s, 0.6); s:run(1.5)
+  eq(s:count(E.EV_JUICY), 0, "juicy flicks")
+  eq(s:count(E.EV_FRONT), 1, "front"); eq(s:count(E.EV_BACK), 1, "back")
+  eq(s:count(E.EV_LOOP), 1, "loop"); eq(s:count(E.EV_MATTY), 1, "Matty")
+end)
+
+test("flicking back too late is not a juicy flick", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  juicy(s, 1, 1.6); s:run(1.5)
+  eq(s:count(E.EV_JUICY), 0, "juicy flicks")
+end)
+
 print("Freestyle score")
 
 local function aggressive(s, secs)
@@ -712,7 +789,7 @@ local function nameRig(over)
   local cfg = config(over)
   local f = fakeLink()
   local L = msp.new(f.push, f.pop)
-  local N = msp.newName(cfg, L)
+  local N = msp.newName(cfg, L, core.new(cfg).msgs)
   local rig = { f = f, L = L, N = N, t = 0 }
   function rig.tick(desired, secs, linkUp)
     if linkUp == nil then linkUp = true end
@@ -799,7 +876,7 @@ end)
 test("recognises its own messages", function()
   local r = nameRig()
   for _, txt in ipairs({ "SCORE 10", "NICE ROLL! 20", "FRONT FLIP! X2", "DOUBLE ROLL! 20",
-      "TRIPLE FRONT 75", "POWER LOOP! 40", "MATTY FLIP! X2", "FULL SEND! 120", "NEW BEST! 300", "CRASH! -5" }) do
+      "TRIPLE FRONT 75", "POWER LOOP! 40", "MATTY FLIP! X2", "JUICY FLICK! 35", "FULL SEND! 120", "NEW BEST! 300", "CRASH! -5" }) do
     check(msp.looksOurs(r.N, txt), txt)
   end
   for _, txt in ipairs({ "MY WHOOP", "TINYHAWK 2", "", "MOBULA7" }) do

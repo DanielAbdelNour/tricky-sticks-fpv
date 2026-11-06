@@ -167,13 +167,9 @@ end
 -- Craft name manager: read the original name, write messages (rate limited,
 -- only on change), restore the original when desired == nil.
 ---------------------------------------------------------------------------
-function M.newName(cfg, L)
-  local msgs = {}
-  for _, k in ipairs({ "MSG_ROLL", "MSG_FRONTFLIP", "MSG_BACKFLIP", "MSG_CRASH", "MSG_SCORE",
-      "MSG_LOOP", "MSG_SPIN", "MSG_ORBIT", "MSG_MATTY", "MSG_STYLE", "MSG_FULLSEND", "MSG_BEST",
-      "MSG_DOUBLE", "MSG_TRIPLE" }) do
-    if cfg[k] then msgs[#msgs + 1] = string.upper(cfg[k]) end
-  end
+-- msgs: every message text we may write, as values (the detector's
+-- D.msgs; shared rather than copied to save memory).
+function M.newName(cfg, L, msgs)
   return {
     cfg = cfg, L = L, msgs = msgs,
     orig = nil,        -- original craft name (nil = unknown)
@@ -191,8 +187,7 @@ end
 function M.looksOurs(N, s)
   local head = string.match(s, "^(.-) %-?%d+$") or string.match(s, "^(.-) X%d+$")
   if not head or head == "" then return false end
-  for i = 1, #N.msgs do
-    local m = N.msgs[i]
+  for _, m in pairs(N.msgs) do
     -- head is a (possibly truncated) message, or starts with DOUBLE/TRIPLE
     if string.sub(m, 1, #head) == head or string.sub(head, 1, #m + 1) == m .. " " then
       return true
