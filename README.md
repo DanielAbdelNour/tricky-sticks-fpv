@@ -19,9 +19,8 @@ nothing needs flashing. It runs on EdgeTX 2.9+ radios with an ELRS module:
   telemetry script. Built on a Pocket and confirmed on its factory EdgeTX
   (July 2023, around 2.9).
 - **Colour screens** (Radiomaster TX16S/TX15, Jumper T15...) as a widget.
-  New, and not yet confirmed on a real radio: please
-  [open an issue](https://github.com/DanielAbdelNour/tricky-sticks-fpv/issues)
-  if something looks wrong.
+  Confirmed on a Jumper T15 Pro. If it looks wrong on your radio, please
+  [open an issue](https://github.com/DanielAbdelNour/tricky-sticks-fpv/issues).
 
 It's a toy, not a judge. A trick shows up up to ~1 s late, because the script
 waits for telemetry to confirm it.
