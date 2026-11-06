@@ -13,7 +13,7 @@ local floor = math.floor
 local PAGES = 3
 local EV_NAMES = { "ROLL", "FRONT FLIP", "BACK FLIP", "CRASH", "ARMED", "DISARMED",
                    "NO CONFIRM", "TURTLE", "POWER LOOP", "SPIN", "ORBIT", "STYLE",
-                   "NEW BEST" }
+                   "NEW BEST", "MATTY FLIP" }
 
 local C, H                       -- colours and font heights, set on first draw
 
@@ -165,7 +165,7 @@ local function drawLive(R, w, h, full)
   if y + S + M <= bottom then
     local c = D.counts
     local cols = {
-      { "ROLL", c[E.EV_ROLL] }, { "FLIP", c[E.EV_FRONT] + c[E.EV_BACK] }, { "LOOP", c[E.EV_LOOP] },
+      { "ROLL", c[E.EV_ROLL] }, { "FLIP", c[E.EV_FRONT] + c[E.EV_BACK] + c[E.EV_MATTY] }, { "LOOP", c[E.EV_LOOP] },
       { "SPIN", c[E.EV_SPIN] }, { "ORBIT", c[E.EV_ORBIT] },
     }
     for i = 1, #cols do stat(10 + floor((i - 1) * (w - 20) / #cols), y, cols[i][1], cols[i][2], MIDSIZE) end
@@ -198,17 +198,18 @@ local function drawSummary(R, w, h, full)
 
   local grid = {
     { "ROLL", c[E.EV_ROLL] }, { "FRONT", c[E.EV_FRONT] }, { "BACK", c[E.EV_BACK] },
-    { "LOOP", c[E.EV_LOOP] }, { "SPIN", c[E.EV_SPIN] }, { "ORBIT", c[E.EV_ORBIT] },
-    { "BEST COMBO", "X" .. D.bestCombo }, { "STYLE", int(D.stylePts) }, { "CRASH", c[E.EV_CRASH] },
+    { "MATTY", c[E.EV_MATTY] }, { "LOOP", c[E.EV_LOOP] }, { "SPIN", c[E.EV_SPIN] },
+    { "ORBIT", c[E.EV_ORBIT] }, { "STYLE", int(D.stylePts) }, { "COMBO", "X" .. D.bestCombo },
+    { "CRASH", c[E.EV_CRASH] },
   }
   local bottom = h - S - 8
   local f = MIDSIZE                 -- smaller numbers if three rows don't fit
   if y + 3 * row > bottom then f, row = 0, S + H[0] + 2 end
-  for i = 1, #grid do
-    local col, r = (i - 1) % 3, floor((i - 1) / 3)
+  for i = 1, #grid do               -- four columns
+    local col, r = (i - 1) % 4, floor((i - 1) / 4)
     local gy = y + r * row
     if gy + row > bottom then break end
-    stat(floor(col * w / 3) + 10, gy, grid[i][1], grid[i][2], f)
+    stat(floor(col * w / 4) + 10, gy, grid[i][1], grid[i][2], f)
   end
   footer(R, w, h, full)
 end

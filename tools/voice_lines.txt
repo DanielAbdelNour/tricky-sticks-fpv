@@ -35,6 +35,11 @@ orbit|Orbit!
 orbit|Round and round!
 orbit|Smooth circle!
 orbit|Locked on!
+matty|Matty flip!
+matty|Nice Matty!
+matty|Matty flip, baby!
+matty|Right over it!
+matty|Hang time!
 
 # Doubles and triples
 roll2|Double roll!

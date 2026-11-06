@@ -7,7 +7,7 @@ local S = SMLSIZE
 local PAGES = 3
 local EV_NAMES = { "ROLL", "FRONT FLIP", "BACK FLIP", "CRASH", "ARMED", "DISARMED",
                    "NO CONFIRM", "TURTLE", "POWER LOOP", "SPIN", "ORBIT", "STYLE",
-                   "NEW BEST" }
+                   "NEW BEST", "MATTY FLIP" }
 
 -- Draw "LABEL n" at x,y; returns the x after it (plus a gap).
 local function pair(x, y, label, n)
@@ -89,7 +89,8 @@ local function drawSummary(R)
   x = pair(x, 29, "SPIN", c[E.EV_SPIN])
   pair(x, 29, "ORBIT", c[E.EV_ORBIT])
   x = pair(0, 38, "COMBO X", D.bestCombo)
-  pair(x, 38, "STYLE", D.stylePts)
+  x = pair(x, 38, "STYLE", D.stylePts)
+  pair(x, 38, "MATTY", c[E.EV_MATTY])
   x = pair(0, 47, "CRASH", c[E.EV_CRASH])
   lcd.drawText(x, 47, "TIME", S)
   local secs = D.armed and (getTime() / 100 - D.armT) or D.flightTime

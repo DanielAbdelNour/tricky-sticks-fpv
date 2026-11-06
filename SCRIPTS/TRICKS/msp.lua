@@ -170,7 +170,7 @@ end
 function M.newName(cfg, L)
   local msgs = {}
   for _, k in ipairs({ "MSG_ROLL", "MSG_FRONTFLIP", "MSG_BACKFLIP", "MSG_CRASH", "MSG_SCORE",
-      "MSG_LOOP", "MSG_SPIN", "MSG_ORBIT", "MSG_STYLE", "MSG_FULLSEND", "MSG_BEST",
+      "MSG_LOOP", "MSG_SPIN", "MSG_ORBIT", "MSG_MATTY", "MSG_STYLE", "MSG_FULLSEND", "MSG_BEST",
       "MSG_DOUBLE", "MSG_TRIPLE" }) do
     if cfg[k] then msgs[#msgs + 1] = string.upper(cfg[k]) end
   end

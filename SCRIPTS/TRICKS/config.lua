@@ -13,6 +13,7 @@ return {
   POINTS_LOOP       = 40,        -- power loop
   POINTS_SPIN       = 15,        -- 360 yaw spin
   POINTS_ORBIT      = 30,        -- full banked 360 turn
+  POINTS_MATTY      = 50,        -- Matty flip (back flip that hangs inverted)
   STYLE_POINTS      = 10,        -- max freestyle points per STYLE_PERIOD
   CRASH_PENALTY     = 0,         -- points subtracted on a crash (0 = none)
 
@@ -25,6 +26,7 @@ return {
   MSG_LOOP          = "POWER LOOP!",
   MSG_SPIN          = "SPIN!",
   MSG_ORBIT         = "ORBIT!",
+  MSG_MATTY         = "MATTY FLIP!",
   MSG_STYLE         = "SENDING IT!",   -- freestyle score above STYLE_MIN
   MSG_FULLSEND      = "FULL SEND!",    -- freestyle score above STYLE_FULL
   MSG_BEST          = "NEW BEST!",
@@ -87,6 +89,12 @@ return {
   ---------------------------------------------------------------------------
   SPIN_CANDIDATE_DEG = 300,      -- commanded yaw rotation within WINDOW
   SPIN_CONFIRM_DEG  = 270,       -- telemetry yaw rotation needed for one spin
+
+  ---------------------------------------------------------------------------
+  -- Matty flips: back flip to inverted, pause there (pitch stick released),
+  -- then finish the flip. The whole trick has to fit in LOOP_WINDOW.
+  ---------------------------------------------------------------------------
+  MATTY_HANG        = 0.3,       -- inverted with pitch below SETTLE_FRAC this long
 
   ---------------------------------------------------------------------------
   -- Orbits: banked, continuous 360 heading change (no GPS: this is a full

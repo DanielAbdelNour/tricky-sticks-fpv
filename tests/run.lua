@@ -401,6 +401,100 @@ test("same rotation with low throttle is a back flip", function()
   eq(s:count(E.EV_BACK), 1, "back flips")
 end)
 
+-- Half back flip, hang inverted with the pitch stick released, finish the flip
+local function matty(s, hang, thr2)
+  s:run(0.3, 0, -1, 0.4)             -- 180 deg back: inverted
+  s:run(hang, 0, 0, 0.2)             -- float
+  s:run(0.3, 0, -1, thr2 or 0.5)     -- the other 180 deg
+end
+
+test("Matty flip: back flip with a pause inverted scores 50", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  matty(s, 0.6)
+  s:run(0.3, 0, 0, 0.4)
+  eq(s.text, "MATTY FLIP! 50", "osd")
+  s:run(1.2, 0, 0, 0.4)
+  eq(s:count(E.EV_MATTY), 1, "Matty flips")
+  eq(s:count(E.EV_BACK), 0, "not a back flip")
+  eq(s:count(E.EV_CRASH), 0, "the hang isn't a crash")
+  eq(s.S.score, 50, "score")
+  eq(s.S.counts[E.EV_MATTY], 1, "summary count")
+end)
+
+test("Matty flip with a throttle punch is not a power loop", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  matty(s, 0.6, 1.0)
+  s:run(1.5, 0, 0, 0.5)
+  eq(s:count(E.EV_MATTY), 1, "Matty flips")
+  eq(s:count(E.EV_LOOP), 0, "loops")
+end)
+
+test("Matty flip: long hang (long window) and slower halves", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  matty(s, 0.9)
+  s:run(1.5, 0, 0, 0.4)
+  eq(s:count(E.EV_MATTY), 1, "long hang")
+  s:run(0.65, 0, -0.6, 0.4); s:run(0.6, 0, 0, 0.2); s:run(0.65, 0, -0.6, 0.6)
+  s:run(1.5, 0, 0, 0.4)
+  eq(s:count(E.EV_MATTY), 2, "slower halves")
+  eq(s:count(E.EV_CRASH), 0, "crashes")
+end)
+
+test("Matty flip with 5 Hz telemetry and 150 ms latency", function()
+  local s = Sim.new(core, config(), { attHz = 5, latency = 0.15 })
+  s:armAndHover()
+  matty(s, 0.7)
+  s:run(1.5, 0, 0, 0.4)
+  eq(s:count(E.EV_MATTY), 1, "Matty flips")
+end)
+
+test("a short pause inverted is still a back flip", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  matty(s, 0.15)
+  s:run(1.5, 0, 0, 0.4)
+  eq(s:count(E.EV_MATTY), 0, "Matty flips")
+  eq(s:count(E.EV_BACK), 1, "back flips")
+end)
+
+test("back flips and power loops are not Matty flips", function()
+  for _, o in ipairs({ {}, { attHz = 5, latency = 0.15 }, { attHz = 10, latency = 0.05 } }) do
+    local s = Sim.new(core, config(), o)
+    s:armAndHover()
+    s:run(0.6, 0, -1, 0.3); s:run(1.5)               -- back flip
+    s:run(0.9, 0, -0.7, 0.3); s:run(1.5)             -- slower back flip
+    s:run(1.2, 0, -1, 0.3); s:run(1.5)               -- double back flip
+    s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5) -- power loop
+    s:run(1.8, 0, -0.45, 0.8); s:run(1.5, 0, 0, 0.5) -- slow power loop
+    eq(s:count(E.EV_MATTY), 0, "Matty flips at " .. (o.attHz or 5) .. " Hz")
+    eq(s:count(E.EV_BACK), 3, "back flips")
+    eq(s:count(E.EV_LOOP), 2, "loops")
+  end
+end)
+
+test("hanging inverted, then a separate back flip, is a back flip", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s:run(0.3, 1, 0, 0.4); s:run(0.8, 0, 0, 0.2); s:run(0.3, 1, 0, 0.4)  -- half roll, hang, half roll
+  s:run(0.3, 0, 0, 0.4)
+  s:run(0.6, 0, -1, 0.3); s:run(1.5)
+  eq(s:count(E.EV_MATTY), 0, "Matty flips")
+  eq(s:count(E.EV_BACK), 1, "back flips")
+end)
+
+test("half back flip that ends upside down on the ground is a crash", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s:run(0.3, 0, -1, 0.4)
+  s.locked = true
+  s:run(1.5, 0, 0, 0)
+  eq(s:count(E.EV_CRASH), 1, "crashes")
+  eq(s:count(E.EV_MATTY), 0, "Matty flips")
+end)
+
 print("Freestyle score")
 
 local function aggressive(s, secs)
@@ -705,7 +799,7 @@ end)
 test("recognises its own messages", function()
   local r = nameRig()
   for _, txt in ipairs({ "SCORE 10", "NICE ROLL! 20", "FRONT FLIP! X2", "DOUBLE ROLL! 20",
-      "TRIPLE FRONT 75", "POWER LOOP! 40", "FULL SEND! 120", "NEW BEST! 300", "CRASH! -5" }) do
+      "TRIPLE FRONT 75", "POWER LOOP! 40", "MATTY FLIP! X2", "FULL SEND! 120", "NEW BEST! 300", "CRASH! -5" }) do
     check(msp.looksOurs(r.N, txt), txt)
   end
   for _, txt in ipairs({ "MY WHOOP", "TINYHAWK 2", "", "MOBULA7" }) do

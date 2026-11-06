@@ -68,12 +68,12 @@ end
 -- exist (silence). tests/widget.lua and tests/voice.lua check this.
 ---------------------------------------------------------------------------
 local VOICE_DIRS = "roll roll2 roll3 front front2 front3 back back2 back3 loop spin spin2 " ..
-                   "spin3 orbit style fullsend combo2 combo3 combo4 combo5 best crash arm " ..
+                   "spin3 orbit matty style fullsend combo2 combo3 combo4 combo5 best crash arm " ..
                    "score generic generic2"
 local VOICE_MAX = 16
 local B16 = 65536                 -- 2^16
 local VOICE_NAMES = { "roll", "front", "back", "crash", "arm", nil, nil, nil, "loop",
-                      "spin", "orbit", "style", "best" }   -- indexed by event code
+                      "spin", "orbit", "style", "best", "matty" }   -- indexed by event code
 local vClips, vState = {}, {}
 local scanNext, scanDir, scanN, scanMask, scanCs   -- scan, a few files per tick
 local voiceUntil, styleVoiceT = 0, -1e9
@@ -151,7 +151,7 @@ local function sound(ev, t)
     if D.styleNow >= cfg.STYLE_FULL then name = "fullsend" end
     if t - styleVoiceT < cfg.VOICE_STYLE_GAP then name = nil end
   elseif ev == E.EV_ROLL or ev == E.EV_FRONT or ev == E.EV_BACK or ev == E.EV_LOOP
-      or ev == E.EV_SPIN or ev == E.EV_ORBIT then
+      or ev == E.EV_SPIN or ev == E.EV_ORBIT or ev == E.EV_MATTY then
     local multi = D.lastCount > 1
     if multi and vClips[name .. D.lastCount] then name = name .. D.lastCount end
     -- Sometimes a generic line ("Nailed it!") instead; bigger ones for multis
@@ -180,6 +180,7 @@ local function sound(ev, t)
     playTone(1200 + up, 60, 20); playTone(1800 + up, 120, 0)
   elseif ev == E.EV_FRONT then tones3(900 + up, 1300 + up, 1900 + up)
   elseif ev == E.EV_BACK then tones3(1100 + up, 1600 + up, 2200 + up)
+  elseif ev == E.EV_MATTY then tones3(1100 + up, 1100 + up, 2200 + up, 220)
   elseif ev == E.EV_LOOP then playTone(600 + up, 500, 0, 0, 3)
   elseif ev == E.EV_SPIN then tones3(1500 + up, 1200 + up, 1500 + up, 80)
   elseif ev == E.EV_ORBIT then playTone(1000 + up, 120, 40); playTone(1000 + up, 120, 0)

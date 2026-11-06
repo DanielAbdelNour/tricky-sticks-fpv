@@ -31,7 +31,8 @@ M.EV_SPIN   = 10  -- yaw spin
 M.EV_ORBIT  = 11  -- banked 360 turn
 M.EV_STYLE  = 12  -- freestyle aggression points
 M.EV_BEST   = 13  -- passed the saved high score this flight
-M.NUM_EV    = 13
+M.EV_MATTY  = 14  -- Matty flip: back flip with a pause while inverted
+M.NUM_EV    = 14
 
 local abs, cos, rad, deg, floor = math.abs, math.cos, math.rad, math.deg, math.floor
 
@@ -48,7 +49,7 @@ local NCH = 6
 -- Extra entries in S.msgs (after the event codes) and the tilt thresholds in
 -- S.zt. Kept in arrays so the state table stays at <= 64 fields (a smaller
 -- hash part: memory is tight on the radio).
-local MSG_DOUBLE, MSG_TRIPLE, MSG_FULLSEND, MSG_SCOREMSG = 14, 15, 16, 17
+local MSG_DOUBLE, MSG_TRIPLE, MSG_FULLSEND, MSG_SCOREMSG = 15, 16, 17, 18
 local Z_INV, Z_UP, Z_CRASH, Z_CRASHCLR, Z_TURTLE, Z_TURTLECLR = 1, 2, 3, 4, 5, 6
 
 -- Betaflight appends a status char to the CRSF flight mode when disarmed:
@@ -147,7 +148,7 @@ function M.new(cfg)
       [M.EV_BACK] = up(cfg.MSG_BACKFLIP), [M.EV_CRASH] = up(cfg.MSG_CRASH),
       [M.EV_LOOP] = up(cfg.MSG_LOOP), [M.EV_SPIN] = up(cfg.MSG_SPIN),
       [M.EV_ORBIT] = up(cfg.MSG_ORBIT), [M.EV_STYLE] = up(cfg.MSG_STYLE),
-      [M.EV_BEST] = up(cfg.MSG_BEST),
+      [M.EV_BEST] = up(cfg.MSG_BEST), [M.EV_MATTY] = up(cfg.MSG_MATTY),
       [MSG_DOUBLE] = up(cfg.MSG_DOUBLE), [MSG_TRIPLE] = up(cfg.MSG_TRIPLE),
       [MSG_FULLSEND] = up(cfg.MSG_FULLSEND), [MSG_SCOREMSG] = up(cfg.MSG_SCORE),
     },
@@ -159,14 +160,16 @@ function M.new(cfg)
       [M.EV_ROLL] = cfg.POINTS_ROLL, [M.EV_FRONT] = cfg.POINTS_FRONTFLIP,
       [M.EV_BACK] = cfg.POINTS_BACKFLIP, [M.EV_LOOP] = cfg.POINTS_LOOP,
       [M.EV_SPIN] = cfg.POINTS_SPIN, [M.EV_ORBIT] = cfg.POINTS_ORBIT,
+      [M.EV_MATTY] = cfg.POINTS_MATTY,
     },
     counts = {},                 -- per-flight event counts (summary)
     epEnd = { -1e9, -1e9, -1e9, -1e9 }, epIdx = 1, inInv = false,
+    hangT = 0, hangOkT = -1e9,
     lastT = nil,
     armed = false, armT = 0, score = 0, turtle = false, turtleChecked = false,
     z = 1, lastInvT = -1e9, lastUpT = -1e9, tiltSince = nil,
     lastYaw = nil, lastRollD = 0, lastPitchD = 0,
-    lastThrT = -1e9, lastThr = 0,
+    lastThrT = -1e9, lastThr = 0, lastStickT = -1e9,
     pending = 0, pendT = 0, pendWin = 0, pendCount = 0, pendDir = 1, pendYaw = 0,
     cooldownUntil = -1e9, crashLatched = false,
     combo = 0, bestCombo = 0, lastTrickT = -1e9,
@@ -276,6 +279,7 @@ local function startFlight(S, t)
   S.cooldownUntil = -1e9
   S.lastInvT, S.lastUpT = -1e9, -1e9
   for i = 1, 4 do S.epEnd[i] = -1e9 end
+  S.hangT, S.hangOkT = 0, -1e9
   for i = 1, M.NUM_EV do S.counts[i] = 0 end
   S.combo, S.bestCombo, S.lastTrickT = 0, 0, -1e9
   S.bestAnnounced, S.bestQueued, S.newBest = false, false, false
@@ -305,11 +309,15 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     local zt = S.zt
     if z < zt[Z_INV] then
       S.lastInvT = t
-      if not S.inInv then S.epIdx = S.epIdx % 4 + 1 end
+      if not S.inInv then
+        S.epIdx = S.epIdx % 4 + 1
+        S.hangOkT = -1e9   -- a hang only counts for the episode it happened in
+      end
       S.epEnd[S.epIdx] = t
       S.inInv = true
     else
       S.inInv = false
+      S.hangT = 0
     end
     if z > zt[Z_UP] then S.lastUpT = t end
     if z < zt[Z_CRASH] then
@@ -363,6 +371,7 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
 
   -- Armed from here on.
   if thr >= cfg.THR_MIN then S.lastThrT = t end
+  if abs(sRoll) >= cfg.CRASH_STICK or abs(sPitch) >= cfg.CRASH_STICK then S.lastStickT = t end
 
   -- Turtle mode: armed while inverted. Judged from the first valid attitude
   -- at arming. Ignore everything until upright again, then restart the grace.
@@ -405,6 +414,14 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
   end
   local ss, sl = S.ss, S.sl
 
+  -- Matty flip hang: inverted (telemetry) with the pitch stick released
+  if attOk and S.inInv and abs(fp) < cfg.SETTLE_FRAC then
+    S.hangT = S.hangT + dt
+    if S.hangT >= cfg.MATTY_HANG then S.hangOkT = t end
+  else
+    S.hangT = 0
+  end
+
   -- Freestyle accumulators
   S.stStk = S.stStk + (abs(sRoll) + abs(sPitch) + abs(sYaw)) * dt
   S.stThr = S.stThr + thr * dt
@@ -444,6 +461,11 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
         return award(S, t, p, seen)
       end
     elseif settled and S.lastInvT >= S.pendWin and S.lastUpT > S.lastInvT then
+      -- A back rotation that paused inverted in its (last) inverted episode
+      -- is a Matty flip
+      if (p == M.EV_BACK or p == M.EV_LOOP) and S.hangOkT >= S.pendWin then
+        return award(S, t, M.EV_MATTY, 1)
+      end
       local n = episodesSince(S, S.pendWin)
       if n > S.pendCount then n = S.pendCount end
       if n < 1 then n = 1 end
@@ -487,14 +509,14 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     end
   end
 
-  -- Crash: tilted beyond CRASH_TILT for CRASH_TIME with sticks centred and no
-  -- trick rotation commanded.
+  -- Crash: tilted beyond CRASH_TILT for CRASH_TIME with sticks centred (the
+  -- time counts from when they were centred) and no trick rotation commanded.
   if not S.crashLatched and S.tiltSince then
     local since = S.tiltSince
     local graceEnd = S.armT + cfg.ARM_GRACE
     if since < graceEnd then since = graceEnd end
+    if since < S.lastStickT then since = S.lastStickT end
     if t - since >= cfg.CRASH_TIME
-        and abs(sRoll) < cfg.CRASH_STICK and abs(sPitch) < cfg.CRASH_STICK
         and abs(ss[C_ROLL]) < cfg.CRASH_MAX_WINDOW_DEG
         and abs(ss[C_PITCH]) < cfg.CRASH_MAX_WINDOW_DEG then
       return crash(S, t)

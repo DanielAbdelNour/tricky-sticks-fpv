@@ -7,8 +7,8 @@ on your goggles' OSD with a running score:
 NICE ROLL! 10  →  FRONT FLIP! X2  →  DOUBLE ROLL! X3  →  SCORE 120  →  FULL SEND! 128  →  NEW BEST! 128
 ```
 
-It detects rolls, front/back flips, doubles and triples, power loops, yaw
-spins, orbits, combos, crashes, and rewards aggressive freestyle. It keeps your
+It detects rolls, front/back flips, doubles and triples, power loops, Matty
+flips, yaw spins, orbits, combos, crashes, and rewards aggressive freestyle. It keeps your
 high score on the SD card and shows a flight summary on the radio.
 
 It works with stock Betaflight and stock ExpressLRS. The radio writes the text
@@ -101,6 +101,7 @@ with your radio, EdgeTX version and the **MEM** number from the STATUS page.
 | Front flip | 25 | `FRONT FLIP!` | same, pitch stick forward |
 | Back flip | 25 | `BACK FLIP!` | same, pitch stick back, throttle low |
 | Power loop | 40 | `POWER LOOP!` | back-pitch rotation (up to 2.5 s) with throttle averaging 50% or more, inverted then upright |
+| Matty flip | 50 | `MATTY FLIP!` | a back flip or loop (up to 2.5 s) that pauses inverted: telemetry inverted with the pitch stick released for 0.3 s or more |
 | Double / triple | ×2 / ×3 | `DOUBLE ROLL!`, `TRIPLE FRONT!` | each extra 360° of stick, capped by how many separate times telemetry saw the quad inverted (for spins: by telemetry yaw) |
 | Yaw spin | 15 | `SPIN!` | yaw stick commands ~300°, telemetry yaw turns 270° or more |
 | Orbit | 30 | `ORBIT!` | telemetry: banked at least 15° and heading turns a full 360° in 1.5–8 s |
@@ -138,6 +139,18 @@ resets every time you arm. On disarm the original craft name is put back.
 with throttle averaging 50% or more is a power loop, and with less it's a back
 flip. Tune `LOOP_THR_AVG` to match how you fly them.
 
+**Matty flips** are told apart from back flips and loops by the pause. You
+pitch back to inverted, let go of the pitch stick and float, then pitch back
+again to finish the flip. If telemetry shows the quad inverted while the pitch
+stick is released (under `SETTLE_FRAC`) for at least `MATTY_HANG` (0.3 s), the
+rotation scores as a Matty flip whatever the throttle did. In a plain back flip
+or loop you hold the stick through the inverted part, so there's no pause.
+Telemetry is sampled, so at 5 Hz the pause you fly needs to be about 0.45 s
+before 0.3 s of it shows up. Two limits: the whole trick has to fit in 2.5 s
+(`LOOP_WINDOW`), and floating inverted with the sticks centred for more than
+1 s (`CRASH_TIME`) counts as a crash, because from the attitude it looks just
+like lying upside down after one.
+
 **Orbits** without GPS can't be measured around a point. What the script
 measures is a full, continuous, banked 360° turn that takes 1.5–8 s. That's what
 an orbit looks like from the quad's attitude, but a wide circle counts too.
@@ -159,9 +172,9 @@ as a bar. Freestyle points don't interrupt a trick message on the OSD.
 
 ### Crash rules
 
-- **Stuck tilted.** Tilted beyond 70° from level for more than 1 s while roll
-  and pitch sticks are near centre (under 15%) and less than 90° of rotation
-  has been commanded in the window. Example: lying on its side or upside down
+- **Stuck tilted.** Tilted beyond 70° from level for more than 1 s since the
+  roll and pitch sticks were last moved off centre (15% or more), with less
+  than 90° of rotation commanded in the window. Example: lying on its side or upside down
   after hitting something.
 - **Disarm while tilted.** Disarming while the last attitude is beyond 70°.
   This plays the crash sound, but the OSD is already showing Betaflight's
@@ -234,7 +247,7 @@ TRICKS              ARMED      LAST FLIGHT       DISARMED     STATUS           D
 SCORE  120     BEST 95         SCORE 120 BEST 120 NEW!        FM OK  ATT 6 HZ  YAW OK
                COMBO X3        ROLL 4 FRONT 2 BACK 1          STICKS OK      MEM 41
 LAST  2X ROLL         1s       LOOP 1 SPIN 2 ORBIT 1          MSP OK   WRITES 14
-STYLE [██████░░░░]  +18        COMBO X3 STYLE 18              NAME MY WHOOP
+STYLE [██████░░░░]  +18        COMBO X3 STYLE 18 MATTY 1      NAME MY WHOOP
 FM ok ATT 6 Hz MSP ok          CRASH 1 TIME 02:34
 ```
 
@@ -265,6 +278,7 @@ likely to change:
 | `UPRIGHT_TILT` | 60 | You exit flips at a steep angle: raise it. |
 | `SETTLE_FRAC` | 0.25 | Tricks score late because you keep some stick in afterwards: raise it. |
 | `LOOP_THR_AVG` | 0.5 | Power loops register as back flips: lower it. Punchy back flips register as loops: raise it. |
+| `MATTY_HANG` | 0.3 s | Matty flips register as back flips: lower it (not much under 0.2 s). Ordinary back flips register as Matty flips: raise it. |
 | `SPIN_CONFIRM_DEG` | 270 | Spins show `NO CONFIRM`: lower it. |
 | `ORBIT_MIN_BANK` / `ORBIT_MIN_TIME` | 15° / 1.5 s | Orbits not counted: lower them. Ordinary turns counted: raise them. |
 | `COMBO_WINDOW` / `COMBO_MAX` | 3 s / 5 | Make combos easier or harder. |
