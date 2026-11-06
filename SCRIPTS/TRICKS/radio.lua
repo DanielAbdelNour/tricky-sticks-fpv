@@ -7,7 +7,7 @@
 -- global `unpack`; see tests/globals.lua). Memory is tight on these radios,
 -- so state the screen needs is kept as fields of R instead of extra tables.
 
-local R = { page = 1, linkUp = false, attOk = false, attHz = 0 }
+local R = { page = 1, linkUp = false, attOk = false, attHz = 0, voices = 0 }
 local cfg, core, msp, D, N
 local idRoll, idPitch, idYaw, idThr, idAttP, idAttR, idAttY, idFM
 local lastLookup, lastTick, hadLink = -1e9, -1, false
@@ -88,8 +88,12 @@ local function scanVoices()
       if cs > scanCs then scanCs = cs end
     end
     if scanN >= VOICE_MAX then
-      if scanMask > 0 then vClips[scanDir] = scanMask + scanCs * B20 end
+      if scanMask > 0 then
+        vClips[scanDir] = scanMask + scanCs * B20
+        R.voices = R.voices + 1         -- callouts with clips (STATUS page)
+      end
       scanDir, scanN, scanMask, scanCs = scanNext(), 0, 0, 0
+      R.voiceDone = scanDir == nil
     end
   end
 end

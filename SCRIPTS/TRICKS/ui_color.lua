@@ -241,6 +241,12 @@ local function drawStatus(R, w, h, full)
   line(10, y, cw, "CRAFT NAME", (N and N.known) and (N.orig or "(unknown)") or "-")
   line(x2, y, cw, "LUA MEM", floor(collectgarbage("count")) .. " KB")
   y = y + step
+  -- announcer clips found (callouts with at least one clip)
+  if not (R.cfg.VOICE and R.cfg.SOUND_ON) then line(10, y, cw, "VOICE", "OFF", C.dim)
+  elseif not R.voiceDone then line(10, y, cw, "VOICE", "CHECKING", C.dim)
+  elseif R.voices == 0 then line(10, y, cw, "VOICE", "NO CLIPS", C.hot)
+  else line(10, y, cw, "VOICE", R.voices .. " CALLOUTS", C.ok) end
+  y = y + step
   if R.D.pending ~= 0 then text(10, y, "CHECKING TRICK...", SMLSIZE + BLINK, C.accent) end
   footer(R, w, h, full)
 end

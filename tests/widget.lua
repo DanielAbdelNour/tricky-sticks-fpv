@@ -40,6 +40,10 @@ end
 env.io = {
   open = function(path, mode)
     if mode == "r" then
+      if not files[path] and path:match("%.wav$") then   -- the real voice pack
+        local f = io.open("." .. path, "rb")
+        if f then files[path] = f:read(44); f:close() end
+      end
       if not files[path] then return nil end
       return { path = path, pos = 1 }
     end
@@ -67,7 +71,13 @@ env.getTime = function() return now end
 env.getRSSI = function() return 100 end
 env.getFieldInfo = function(name) if ids[name] then return { id = ids[name] } end end
 env.getValue = function(id) return values[names[id]] end
-for _, k in ipairs({ "playTone", "playFile", "playNumber", "playHaptic" }) do env[k] = function() end end
+local played = {}
+for _, k in ipairs({ "playTone", "playNumber", "playHaptic" }) do env[k] = function() end end
+env.playFile = function(path)
+  assert(#path <= 42, "EdgeTX ignores audio paths over 42 chars: " .. path)
+  assert(io.open("." .. path, "rb"), "played a clip that doesn't exist: " .. path)
+  played[#played + 1] = path
+end
 env.crossfireTelemetryPush = function(cmd, data)
   if cmd == nil then return true end
   if cmd == 0x7C then osd[#osd + 1] = true end
@@ -239,6 +249,9 @@ D.armed, D.combo, D.lastTrickT, D.lastEv, D.lastCount, D.lastEvT, D.styleNow = t
 for _ = 1, 3 do drawAll(env.EVT_VIRTUAL_NEXT) end
 D.lastEv = radio.core.EV_LOOP
 drawAll()
+
+assert(#played > 0, "announcer clips played from the widget")
+assert(texts["26 CALLOUTS"], "STATUS page shows the voice clips found")
 
 assert(#osd > 0, "OSD text written over MSP")
 assert(files["/SCRIPTS/TRICKS/best.txt"] ~= "5", "best score saved")
