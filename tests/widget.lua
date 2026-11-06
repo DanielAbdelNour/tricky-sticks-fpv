@@ -263,7 +263,8 @@ texts = {}
 drawAll(env.EVT_VIRTUAL_ENTER_LONG)
 assert(texts["STATUS"], "holding ENTER stays on the STATUS page")
 assert(texts["26 CALLOUTS"], "STATUS page shows the voice clips found")
-assert(#played == p0 + 1 and played[#played]:match("arm/1%.wav$"), "test part 1: the clip alone")
+assert(#played == p0 + 1 and played[#played]:match("arm/%d+%.wav$"), "test part 1: an arm callout")
+assert(radio.clipCtx == "SCREEN", "test part 1 runs from the screen code")
 assert(tonesPlayed == t0, "test part 1: no beep before the clip")
 texts = {}
 drawAll(env.EVT_VIRTUAL_ENTER)                   -- the release right after: ignored

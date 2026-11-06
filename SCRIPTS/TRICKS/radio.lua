@@ -133,7 +133,7 @@ local function say(t, d, force)
   if not info or (t < voiceUntil and not force) then return false end
   local path = cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav"
   playFile(path)
-  R.said, R.lastClip = R.said + 1, path     -- STATUS page (colour)
+  R.said, R.lastClip, R.clipCtx = R.said + 1, path, R.ctx   -- STATUS page (colour)
   if t > voiceUntil then voiceUntil = t end
   voiceUntil = voiceUntil + floor(info / B20) / 100 + 0.1
   return true
@@ -248,6 +248,9 @@ function R.tick()
 
   if N then msp.nameTick(N, t, core.osdText(D, t), linkUp) end
 end
+
+-- Sound test (colour STATUS page): a callout through the same code as a trick.
+function R.say(d) return say(getTime() / 100, d, true) end
 
 -- load(name) loads a module from /SCRIPTS/TRICKS/ (see trick.lua).
 function R.init(load)

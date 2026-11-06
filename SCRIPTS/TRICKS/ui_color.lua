@@ -19,12 +19,12 @@ local C, H                       -- colours and font heights, set on first draw
 local btn                        -- STATUS page test button: x, y, w, h (full screen)
 local testT, quietUntil, test2T = -1e9, 0, nil
 
--- Sound test (STATUS page), in two parts: an announcer clip on its own,
--- straight out of silence; then 3 s later a beep, the same clip and a
--- number in the radio's own voice (from /SOUNDS/<language>). Which ones you
--- hear shows where sound stops.
+-- Sound test (STATUS page), in two parts: an arm callout through the same
+-- code a trick uses (random clip); then 3 s later a beep, a clip played
+-- directly and a number in the radio's own voice (from /SOUNDS/<language>).
+-- Which ones you hear shows where sound stops.
 local function soundTest(R, now)
-  playFile(R.cfg.VOICE_DIR .. "arm/1.wav")
+  R.say("arm")
   testT, quietUntil, test2T = now, now + 1, now + 3   -- ignore the ENTER release
 end
 
@@ -267,7 +267,7 @@ local function drawStatus(R, w, h, full)
   elseif not R.voiceDone then line(10, y, cw, "VOICE", "CHECKING", C.dim)
   elseif R.voices == 0 then line(10, y, cw, "VOICE", "NO CLIPS", C.hot)
   else line(10, y, cw, "VOICE", R.voices .. " CALLOUTS", C.ok) end
-  line(x2, y, cw, "CLIPS PLAYED", tostring(R.said))
+  line(x2, y, cw, "PLAYED", R.said .. (R.clipCtx and " " .. R.clipCtx or ""))
   y = y + step
   if R.lastClip then line(10, y, w - 20, "LAST CLIP", R.lastClip) ; y = y + step end
   if R.D.pending ~= 0 then text(10, y, "CHECKING TRICK...", SMLSIZE + BLINK, C.accent) end
@@ -282,7 +282,7 @@ local function drawStatus(R, w, h, full)
       local since = getTime() / 100 - testT
       rect(bx, by, bw, bh, since < 7 and C.accent or C.line)
       text(bx + 14, by + 6, label, SMLSIZE, C.text)
-      local hint = since < 3 and "1: CLIP ALONE" or since < 7 and "2: BEEP, CLIP, \"42\""
+      local hint = since < 3 and "1: LIKE A CALLOUT" or since < 7 and "2: BEEP, CLIP, \"42\""
         or "TAP OR HOLD ENTER"
       text(bx - 10, by + 6, hint, SMLSIZE + RIGHT, C.dim)
     end
