@@ -7,6 +7,12 @@ local src = assert(io.open("SCRIPTS/TRICKS/radio.lua")):read("a")
 local list = src:match('local VOICE_DIRS = (.-)\nlocal')
 list = list:gsub('"%s*%.%.%s*"', ""):gsub('"', "")
 local max = tonumber(src:match("local VOICE_MAX = (%d+)"))
+-- Packed voice state must stay exact in EdgeTX 2.11+'s 32-bit floats (< 2^24):
+-- clip mask + longest clip (cs, capped at 255) * B16, and mask + last clip * B16.
+local b16 = tonumber(src:match("local B16 = (%d+)"))
+assert(b16 and 2 ^ max <= b16, "VOICE_MAX clips must fit below B16")
+assert(b16 - 1 + 255 * b16 < 2 ^ 24 and b16 - 1 + max * b16 < 2 ^ 24,
+  "packed voice state would lose bits in 32-bit floats (EdgeTX 2.11+)")
 local known, dirs = {}, {}
 for d in list:gmatch("%S+") do known[d] = true; dirs[#dirs + 1] = d end
 

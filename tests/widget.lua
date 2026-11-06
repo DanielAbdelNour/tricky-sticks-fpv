@@ -60,11 +60,29 @@ env.io = {
   end,
   close = function() end,
 }
+-- EdgeTX 2.11+ runs Lua 5.3 with 32-bit floats: whole numbers are exact only
+-- up to 2^24. Desktop Lua uses doubles, so the voice state tables in
+-- radio.lua get swapped for ones that round what's stored to float32, like
+-- the radio does. (Packing too much into one number made a T15 Pro pick
+-- clips that don't exist, so it stayed silent.)
+local function f32(v)
+  if type(v) ~= "number" then return v end
+  local r = string.unpack("<f", string.pack("<f", v))
+  return math.type(v) == "integer" and r == math.floor(r) and math.tointeger(r) or r
+end
+env.F32TABLE = function()
+  local store = {}
+  return setmetatable({}, { __index = store, __newindex = function(_, k, v) store[k] = f32(v) end })
+end
 local radio                                     -- the shared state, for the stress draw
 env.loadScript = function(path)
   loads[path] = (loads[path] or 0) + 1
-  local chunk = loadfile("." .. path, "t", env)
-  if not path:match("radio%.lua$") then return chunk end
+  if not path:match("radio%.lua$") then return loadfile("." .. path, "t", env) end
+  local src = assert(io.open("." .. path)):read("a")
+  local n
+  src, n = src:gsub("local vClips, vState = {}, {}", "local vClips, vState = F32TABLE(), F32TABLE()")
+  assert(n == 1, "radio.lua: voice state tables not found for the float32 check")
+  local chunk = assert(load(src, "@" .. path, "t", env))
   return function() radio = chunk(); return radio end
 end
 env.getTime = function() return now end
@@ -264,7 +282,6 @@ drawAll(env.EVT_VIRTUAL_ENTER_LONG)
 assert(texts["STATUS"], "holding ENTER stays on the STATUS page")
 assert(texts["26 CALLOUTS"], "STATUS page shows the voice clips found")
 assert(#played == p0 + 1 and played[#played]:match("arm/%d+%.wav$"), "test part 1: an arm callout")
-assert(radio.clipCtx == "SCREEN", "test part 1 runs from the screen code")
 assert(tonesPlayed == t0, "test part 1: no beep before the clip")
 texts = {}
 drawAll(env.EVT_VIRTUAL_ENTER)                   -- the release right after: ignored

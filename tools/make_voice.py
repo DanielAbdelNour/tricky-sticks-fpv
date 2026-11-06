@@ -36,7 +36,7 @@ CACHE = os.path.join(ROOT, "tools", ".voice_cache")
 
 DEFAULT_EL_VOICE = "O9muPbiD3YbjvqpUFCOL"   # "Tricky Sticks FPV"
 DEFAULT_EL_MODEL = "eleven_v3"
-MAX_PER_FOLDER = 20                          # VOICE_MAX in trick.lua
+MAX_PER_FOLDER = 16                          # VOICE_MAX in SCRIPTS/TRICKS/radio.lua
 MAX_PATH = 42                                # EdgeTX audio path limit
 LONG_CLIP = 1.3                              # warn above this (seconds)
 

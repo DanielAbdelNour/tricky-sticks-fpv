@@ -208,7 +208,7 @@ By default an announcer calls out your tricks. Set `VOICE = false` in
   voice is.
 
 **Changing the lines:** edit `tools/voice_lines.txt` (one `callout|line` per
-clip, up to 20 per callout), then run `tools/make_voice.py` to voice them with
+clip, up to 16 per callout), then run `tools/make_voice.py` to voice them with
 ElevenLabs. It needs `ELEVENLABS_API_KEY` in your environment or in a `.env`
 file at the repo root, plus `ffmpeg`. Lines that haven't changed come from a
 local cache and don't use credits. Clips are sped up 15% with the pitch
@@ -362,6 +362,13 @@ The code targets EdgeTX's Lua 5.2 and also runs on desktop Lua 5.1–5.4. It
 avoids per-tick table allocation to keep the Pocket's Lua memory happy.
 
 ### Facts this relies on (checked against source, Nov 2026)
+
+- EdgeTX 2.10 and older run Lua 5.2 with double-precision numbers. EdgeTX 2.11
+  and newer run Lua 5.3 built with `LUA_32BITS`: 32-bit integers and 32-bit
+  floats, which hold whole numbers exactly only up to 2^24. Anything that
+  packs several values into one number must stay below that; the voice state
+  in `radio.lua` does, and `tests/widget.lua` stores it with float32 rounding
+  to check. (`radio/src/thirdparty/Lua/src/luaconf.h`)
 
 - `MSP_SET_NAME` (11) only changes RAM (`pilotConfigMutable()->craftName`)
   and calls `osdAnalyzeActiveElements()`, which redraws the craft name

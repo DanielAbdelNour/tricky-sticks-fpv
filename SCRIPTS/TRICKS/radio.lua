@@ -60,14 +60,18 @@ end
 -- Missing numbers are skipped; a callout with no clips plays its tone.
 -- Clips play in shuffled rounds (each once before any repeats, never the
 -- same one twice in a row). Per callout we keep just two numbers:
---   vClips[d] = bitmask of clips found + longest clip (cs) * 2^20
---   vState[d] = bitmask played this round + last clip * 2^20
+--   vClips[d] = bitmask of clips found + longest clip (cs, max 255) * 2^16
+--   vState[d] = bitmask played this round + last clip * 2^16
+-- Both stay below 2^24: EdgeTX 2.11+ runs Lua 5.3 with 32-bit floats, which
+-- hold whole numbers exactly only up to 2^24 (16.7 million). Bigger packed
+-- numbers lose their low bits there and the script picks clips that don't
+-- exist (silence). See tests/voice.lua.
 ---------------------------------------------------------------------------
 local VOICE_DIRS = "roll roll2 roll3 front front2 front3 back back2 back3 loop spin spin2 " ..
                    "spin3 orbit style fullsend combo2 combo3 combo4 combo5 best crash arm " ..
                    "score generic generic2"
-local VOICE_MAX = 20
-local B20 = 1048576               -- 2^20
+local VOICE_MAX = 16
+local B16 = 65536                 -- 2^16
 local VOICE_NAMES = { "roll", "front", "back", "crash", "arm", nil, nil, nil, "loop",
                       "spin", "orbit", "style", "best" }   -- indexed by event code
 local vClips, vState = {}, {}
@@ -85,11 +89,11 @@ local function scanVoices()
       local cs = floor((core.wavSecs(io.read(f, 44)) or cfg.VOICE_SECS) * 100 + 0.5)
       io.close(f)
       scanMask = scanMask + 2 ^ (scanN - 1)
-      if cs > scanCs then scanCs = cs end
+      if cs > scanCs then scanCs = cs > 255 and 255 or cs end
     end
     if scanN >= VOICE_MAX then
       if scanMask > 0 then
-        vClips[scanDir] = scanMask + scanCs * B20
+        vClips[scanDir] = scanMask + scanCs * B16
         R.voices = R.voices + 1         -- callouts with clips (STATUS page)
       end
       scanDir, scanN, scanMask, scanCs = scanNext(), 0, 0, 0
@@ -101,9 +105,9 @@ end
 -- Choose the next clip of callout d: a random one not yet played this round
 -- and not the one played last.
 local function pick(d)
-  local mask = vClips[d] % B20
+  local mask = vClips[d] % B16
   local st = vState[d] or 0
-  local played, last = st % B20, floor(st / B20)
+  local played, last = st % B16, floor(st / B16)
   local n = 0
   for k = 1, VOICE_MAX do
     if bit(mask, k) and not bit(played, k) and k ~= last then n = n + 1 end
@@ -120,7 +124,7 @@ local function pick(d)
     if bit(mask, k) and not bit(played, k) and k ~= last then
       r = r - 1
       if r == 0 then
-        vState[d] = played + 2 ^ (k - 1) + k * B20
+        vState[d] = played + 2 ^ (k - 1) + k * B16
         return k
       end
     end
@@ -133,9 +137,9 @@ local function say(t, d, force)
   if not info or (t < voiceUntil and not force) then return false end
   local path = cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav"
   playFile(path)
-  R.said, R.lastClip, R.clipCtx = R.said + 1, path, R.ctx   -- STATUS page (colour)
+  R.said, R.lastClip = R.said + 1, path     -- STATUS page (colour)
   if t > voiceUntil then voiceUntil = t end
-  voiceUntil = voiceUntil + floor(info / B20) / 100 + 0.1
+  voiceUntil = voiceUntil + floor(info / B16) / 100 + 0.1
   return true
 end
 

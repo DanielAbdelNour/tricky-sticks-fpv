@@ -35,13 +35,11 @@ local function update(widget, options)
 end
 
 local function background(widget)
-  R.ctx = "BG"                     -- which of the two ran a callout (STATUS page)
   R.tick()
 end
 
 -- event is nil unless the widget is in full screen mode
 local function refresh(widget, event, touchState)
-  R.ctx = "SCREEN"
   R.tick()
   ui(R, widget.zone, event, touchState)
 end
