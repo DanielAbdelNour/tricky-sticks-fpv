@@ -249,6 +249,12 @@ To flip pages yourself, put the widget in full screen mode (select it, press
 score, best, last trick and combo, with a status light (green: armed, grey:
 disarmed, red: no link or no flight mode).
 
+**No voice?** The STATUS page shows how many callouts have clips (**VOICE**),
+how many clips the script has played and the last one. In full screen mode,
+tap **TEST SOUND** (or hold **ENTER**) to hear an arm callout, then 3 s later
+a beep, a clip and a number in the radio's own voice. If none of them play,
+check SYS → Sound (Mode not **Quiet**, Wav volume up).
+
 ## Tuning
 
 Everything is in `SCRIPTS/TRICKS/config.lua`, with comments. The ones you're most
@@ -270,6 +276,7 @@ likely to change:
 | `STYLE_W_*` | 0.4 / 0.3 / 0.3 | Change what counts as aggressive (sticks / throttle / punches). |
 | `CRASH_TILT` / `CRASH_TIME` | 70° / 1 s | False crashes during fast forward flight: raise either. |
 | `POINTS_*`, `MSG_*`, `NOUN_*` | | Your own scoring and wording. OSD text is 16 chars max including the score. |
+| `OSD` | true | `false` sends nothing to the quad: tricks only on the radio screen and in sound. |
 | `VOICE`, `VOICE_GENERIC`, `VOICE_SECS`, `VOICE_STYLE_GAP`, `VOICE_SCORE` | | Voice on/off, share of generic lines, how long a clip is assumed to last, how often "Sending it!" is said, the final score callout. |
 | `SRC_*` | `ail`, `ele`, `rud`, `thr` | Stick sources. Use channel outputs like `{ "ch1" }` if needed. |
 
