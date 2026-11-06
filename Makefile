@@ -8,11 +8,12 @@ test:
 	lua tests/fuzz.lua
 
 # make release V=1.0.0 -> dist/tricky-sticks-fpv-1.0.0.zip holding SCRIPTS/ and WIDGETS/
-# (what goes on the SD card), plus the license.
+# (what goes on the SD card), plus the license. TZ=UTC: zip file times carry
+# no time zone, so build them in UTC like the commits.
 release: test
 	@test -n "$(V)" || (echo "usage: make release V=1.0.0"; exit 1)
 	mkdir -p dist
 	rm -f dist/tricky-sticks-fpv-$(V).zip
-	git archive --format=zip -o dist/tricky-sticks-fpv-$(V).zip HEAD SCRIPTS WIDGETS LICENSE
+	TZ=UTC git archive --format=zip -o dist/tricky-sticks-fpv-$(V).zip HEAD SCRIPTS WIDGETS LICENSE
 
 .PHONY: test release
