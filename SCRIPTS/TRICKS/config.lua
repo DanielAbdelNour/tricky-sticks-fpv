@@ -134,6 +134,7 @@ return {
   ---------------------------------------------------------------------------
   -- MSP / OSD writing
   ---------------------------------------------------------------------------
+  OSD               = true,      -- false: send nothing to the quad (radio screen and sound only)
   WRITE_INTERVAL    = 0.5,       -- min time between MSP_SET_NAME writes (2/s)
   WRITE_RETRY       = 1.5,       -- re-send a write if the FC hasn't acknowledged it by then
   READ_RETRY        = 1.0,       -- retry interval for reading the original name

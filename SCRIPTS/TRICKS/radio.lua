@@ -262,7 +262,7 @@ function R.init(load)
     scanNext = string.gmatch(VOICE_DIRS, "%S+")
     scanDir, scanN, scanMask, scanCs = scanNext(), 0, 0, 0
   end
-  if crossfireTelemetryPush and crossfireTelemetryPop then
+  if cfg.OSD and crossfireTelemetryPush and crossfireTelemetryPop then
     N = msp.newName(cfg, msp.new(crossfireTelemetryPush, crossfireTelemetryPop))
     R.N = N
   end
