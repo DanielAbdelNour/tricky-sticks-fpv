@@ -17,16 +17,24 @@ local EV_NAMES = { "ROLL", "FRONT FLIP", "BACK FLIP", "CRASH", "ARMED", "DISARME
 
 local C, H                       -- colours and font heights, set on first draw
 local btn                        -- STATUS page test button: x, y, w, h (full screen)
-local testT, quietUntil = -1e9, 0
+local testT, quietUntil, test2T = -1e9, 0, nil
 
--- Sound test (STATUS page): a beep, an announcer clip, then a number in the
--- radio's own voice (from /SOUNDS/<language>). Which ones you hear shows
--- where sound stops.
+-- Sound test (STATUS page), in two parts: an announcer clip on its own,
+-- straight out of silence; then 3 s later a beep, the same clip and a
+-- number in the radio's own voice (from /SOUNDS/<language>). Which ones you
+-- hear shows where sound stops.
 local function soundTest(R, now)
-  playTone(1000, 150, 100)
   playFile(R.cfg.VOICE_DIR .. "arm/1.wav")
-  playNumber(42, 0)
-  testT, quietUntil = now, now + 1           -- ignore the ENTER release
+  testT, quietUntil, test2T = now, now + 1, now + 3   -- ignore the ENTER release
+end
+
+local function soundTest2(R, now)
+  if test2T and now >= test2T then
+    test2T = nil
+    playTone(1000, 150, 100)
+    playFile(R.cfg.VOICE_DIR .. "arm/1.wav")
+    playNumber(42, 0)
+  end
 end
 
 local function setup()
@@ -271,9 +279,11 @@ local function drawStatus(R, w, h, full)
     local bx, by = w - 10 - bw, h - S - 8 - bh - 6
     if by > y + S then
       btn = { bx, by, bw, bh }
-      rect(bx, by, bw, bh, getTime() / 100 - testT < 4 and C.accent or C.line)
+      local since = getTime() / 100 - testT
+      rect(bx, by, bw, bh, since < 7 and C.accent or C.line)
       text(bx + 14, by + 6, label, SMLSIZE, C.text)
-      local hint = getTime() / 100 - testT < 4 and "BEEP, CLIP, \"42\"" or "TAP OR HOLD ENTER"
+      local hint = since < 3 and "1: CLIP ALONE" or since < 7 and "2: BEEP, CLIP, \"42\""
+        or "TAP OR HOLD ENTER"
       text(bx - 10, by + 6, hint, SMLSIZE + RIGHT, C.dim)
     end
   end
@@ -326,6 +336,7 @@ return function(R, zone, event, touch)
   if not big then return drawCompact(R, w, h) end
 
   local now = getTime() / 100
+  soundTest2(R, now)
   if full and R.page == 3 and (event == EVT_VIRTUAL_ENTER_LONG or (event == EVT_TOUCH_TAP
       and btn and touch and touch.x >= btn[1] and touch.x < btn[1] + btn[3]
       and touch.y >= btn[2] and touch.y < btn[2] + btn[4])) then

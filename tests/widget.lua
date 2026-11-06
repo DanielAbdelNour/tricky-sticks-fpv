@@ -263,16 +263,19 @@ texts = {}
 drawAll(env.EVT_VIRTUAL_ENTER_LONG)
 assert(texts["STATUS"], "holding ENTER stays on the STATUS page")
 assert(texts["26 CALLOUTS"], "STATUS page shows the voice clips found")
-assert(#played == p0 + 1 and played[#played]:match("arm/1%.wav$"), "test plays an announcer clip")
-assert(tonesPlayed == t0 + 1 and numbers[#numbers] == 42, "test plays a beep and a number")
+assert(#played == p0 + 1 and played[#played]:match("arm/1%.wav$"), "test part 1: the clip alone")
+assert(tonesPlayed == t0, "test part 1: no beep before the clip")
 texts = {}
 drawAll(env.EVT_VIRTUAL_ENTER)                   -- the release right after: ignored
 assert(texts["STATUS"], "ENTER release after the test doesn't change page")
-now = now + 200
+now = now + 300                                  -- 3 s later: part 2
+drawAll()
+assert(#played == p0 + 2 and tonesPlayed == t0 + 1 and numbers[#numbers] == 42,
+  "test part 2: beep, clip, number")
 texts = {}
 -- the button, bottom right, where the last full screen draw (480x272) put it
 drawAll(env.EVT_TOUCH_TAP, { x = 460, y = 230 })
-assert(#played == p0 + 2 and texts["STATUS"], "tapping the button runs the test")
+assert(#played == p0 + 3 and texts["STATUS"], "tapping the button runs the test")
 texts = {}
 drawAll(env.EVT_TOUCH_TAP, { x = 20, y = 100 })  -- elsewhere: next page
 assert(texts["TRICKY STICKS FPV"], "tapping elsewhere still changes page")
