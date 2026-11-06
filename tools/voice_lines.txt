@@ -1,0 +1,147 @@
+# Announcer lines: <callout folder>|<line>. One line per clip; clips are
+# numbered in the order listed (roll/1.wav, roll/2.wav, ...). Add, remove or
+# reword lines freely (up to 20 per folder), then run tools/make_voice.py.
+# A callout with no lines plays its tone on the radio.
+
+# Single tricks
+roll|Nice roll!
+roll|Amazing roll!
+roll|Barrel roll!
+roll|Nice move!
+roll|Smooth roll!
+roll|Clean roll!
+front|Front flip!
+front|Nice front flip!
+front|Flipping forward!
+front|Clean flip!
+front|Over the top!
+back|Back flip!
+back|Nice back flip!
+back|Flipping back!
+back|Backflip, baby!
+back|Smooth back flip!
+loop|Power loop!
+loop|Huge loop!
+loop|What a loop!
+loop|Loop de loop!
+loop|Full power loop!
+spin|Spin!
+spin|Nice spin!
+spin|Three-sixty!
+spin|Spin it!
+spin|Helicopter!
+orbit|Nice orbit!
+orbit|Orbit!
+orbit|Round and round!
+orbit|Smooth circle!
+orbit|Locked on!
+
+# Doubles and triples
+roll2|Double roll!
+roll2|Two rolls!
+roll2|Double barrel!
+roll2|Roll it twice!
+roll2|Double trouble!
+roll3|Triple roll!
+roll3|Three rolls!
+roll3|Triple barrel!
+roll3|Roll, roll, roll!
+roll3|Hat trick!
+front2|Double front flip!
+front2|Two front flips!
+front2|Double forward!
+front2|Front, front!
+front3|Triple front flip!
+front3|Three front flips!
+front3|Triple forward!
+front3|Front flip frenzy!
+back2|Double back flip!
+back2|Two back flips!
+back2|Double backflip!
+back2|Back, back!
+back3|Triple back flip!
+back3|Three back flips!
+back3|Triple backflip!
+back3|Back flip frenzy!
+spin2|Double spin!
+spin2|Seven-twenty!
+spin2|Two spins!
+spin2|Spin cycle!
+spin3|Triple spin!
+spin3|Ten-eighty!
+spin3|Three spins!
+spin3|Tornado!
+
+# Generic lines, used instead of the trick's own line some of the time
+# (VOICE_GENERIC). generic2 is for doubles and triples.
+generic|Amazing!
+generic|Great moves!
+generic|Ripping it!
+generic|Nailed it!
+generic|So smooth!
+generic|Clean!
+generic|Beautiful!
+generic|Huge!
+generic|Sick!
+generic|Textbook!
+generic|Look at that!
+generic|What a move!
+generic2|Incredible!
+generic2|Unbelievable!
+generic2|Are you kidding me?!
+generic2|Insane!
+generic2|Out of this world!
+generic2|Absolute madness!
+
+# Freestyle points
+style|Sending it!
+style|Let it rip!
+style|Getting rowdy!
+style|Nice flow!
+style|Keep it moving!
+fullsend|Full send!
+fullsend|Absolutely sending it!
+fullsend|No brakes!
+fullsend|Maximum send!
+fullsend|Unhinged!
+
+# Combos (played right after the trick)
+combo2|Combo!
+combo2|Back to back!
+combo2|Keep it going!
+combo2|Linking them!
+combo3|Combo three!
+combo3|Three in a row!
+combo3|On fire!
+combo3|Hat trick combo!
+combo4|Combo four!
+combo4|Four in a row!
+combo4|Unreal!
+combo4|Can't stop now!
+combo5|Unstoppable!
+combo5|Five in a row!
+combo5|Combo master!
+combo5|Legendary!
+
+# Other events
+best|New high score!
+best|New personal best!
+best|Record broken!
+best|That's a new record!
+crash|Ouch!
+crash|Yikes!
+crash|That hurt!
+crash|Oof!
+crash|Down it goes!
+crash|Pick it up!
+arm|Let's go!
+arm|Here we go!
+arm|Let's fly!
+arm|Ready, set, rip!
+arm|Show me something!
+
+# Said on landing, right before the radio speaks the number
+score|Final score
+score|You scored
+score|Total score
+score|That flight scored

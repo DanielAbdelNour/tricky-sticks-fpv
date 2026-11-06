@@ -1,0 +1,6 @@
+.DS_Store
+*.luac
+.env
+tools/.voice_cache/
+__pycache__/
+dist/
