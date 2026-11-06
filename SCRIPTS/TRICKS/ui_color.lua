@@ -246,7 +246,9 @@ local function drawStatus(R, w, h, full)
   elseif not R.voiceDone then line(10, y, cw, "VOICE", "CHECKING", C.dim)
   elseif R.voices == 0 then line(10, y, cw, "VOICE", "NO CLIPS", C.hot)
   else line(10, y, cw, "VOICE", R.voices .. " CALLOUTS", C.ok) end
+  line(x2, y, cw, "CLIPS PLAYED", tostring(R.said))
   y = y + step
+  if R.lastClip then line(10, y, w - 20, "LAST CLIP", R.lastClip) ; y = y + step end
   if R.D.pending ~= 0 then text(10, y, "CHECKING TRICK...", SMLSIZE + BLINK, C.accent) end
   footer(R, w, h, full)
 end

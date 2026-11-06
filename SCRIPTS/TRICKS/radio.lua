@@ -7,7 +7,7 @@
 -- global `unpack`; see tests/globals.lua). Memory is tight on these radios,
 -- so state the screen needs is kept as fields of R instead of extra tables.
 
-local R = { page = 1, linkUp = false, attOk = false, attHz = 0, voices = 0 }
+local R = { page = 1, linkUp = false, attOk = false, attHz = 0, voices = 0, said = 0 }
 local cfg, core, msp, D, N
 local idRoll, idPitch, idYaw, idThr, idAttP, idAttR, idAttY, idFM
 local lastLookup, lastTick, hadLink = -1e9, -1, false
@@ -131,7 +131,9 @@ end
 local function say(t, d, force)
   local info = vClips[d]
   if not info or (t < voiceUntil and not force) then return false end
-  playFile(cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav")
+  local path = cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav"
+  playFile(path)
+  R.said, R.lastClip = R.said + 1, path     -- STATUS page (colour)
   if t > voiceUntil then voiceUntil = t end
   voiceUntil = voiceUntil + floor(info / B20) / 100 + 0.1
   return true
