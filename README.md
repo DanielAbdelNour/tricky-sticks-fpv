@@ -13,9 +13,15 @@ high score on the SD card and shows a flight summary on the radio.
 
 It works with stock Betaflight and stock ExpressLRS. The radio writes the text
 into the Betaflight **craft name** over MSP (passed through the ELRS link), so
-nothing needs flashing. Built for a Radiomaster Pocket (128x64 screen) and
-confirmed working on its factory EdgeTX build (July 2023, around 2.9). It
-should run on any EdgeTX 2.9+ radio with an ELRS module.
+nothing needs flashing. It runs on EdgeTX 2.9+ radios with an ELRS module:
+
+- **Black-and-white screens** (Radiomaster Pocket, Zorro, Boxer, TX12...) as a
+  telemetry script. Built on a Pocket and confirmed on its factory EdgeTX
+  (July 2023, around 2.9).
+- **Colour screens** (Radiomaster TX16S/TX15, Jumper T15...) as a widget.
+  New, and not yet confirmed on a real radio: please
+  [open an issue](https://github.com/DanielAbdelNour/tricky-sticks-fpv/issues)
+  if something looks wrong.
 
 It's a toy, not a judge. A trick shows up up to ~1 s late, because the script
 waits for telemetry to confirm it.
@@ -24,27 +30,37 @@ waits for telemetry to confirm it.
 
 Download `tricky-sticks-fpv-<version>.zip` from the
 [latest release](https://github.com/DanielAbdelNour/tricky-sticks-fpv/releases/latest)
-and unzip it. It holds just the `SCRIPTS` folder that goes on the radio.
+and unzip it. It holds the `SCRIPTS` and `WIDGETS` folders that go on the
+radio's SD card. The same download works on black-and-white and colour radios;
+each radio ignores the part meant for the other.
 
 1. Copy the files onto the radio's SD card (USB → "USB Storage", or a card
-   reader). On a Mac, **don't drag the whole `SCRIPTS` folder over** (Finder's
-   "Replace" deletes your other scripts). Copy these instead:
+   reader). On a Mac, **don't drag the whole `SCRIPTS` or `WIDGETS` folder
+   over** (Finder's "Replace" deletes your other scripts). Copy these instead:
    - the `SCRIPTS/TRICKS` folder → into `SCRIPTS/` on the SD card
    - `SCRIPTS/TELEMETRY/trick.lua` → into `SCRIPTS/TELEMETRY/` on the SD card
+   - the `WIDGETS/TRICKY` folder → into `WIDGETS/` on the SD card
 2. On the radio, open your whoop's model → **Telemetry** page. Run
    **Discover new sensors** with the quad powered on, and check that
    `FM`, `Ptch`, `Roll` and `Yaw` show up.
-3. On the same page, under **Screens**, set a screen to **Script** → `trick`.
-4. Go back to the main screen and press **TELE** (on radios without a TELE
-   button, long-press **PAGE**) to open the telemetry screens.
+3. Turn it on. This is the only step that differs:
+   - **Black-and-white radios:** on the same Telemetry page, under
+     **Screens**, set a screen to **Script** → `trick`. Then, on the main
+     screen, press **TELE** (on radios without a TELE button, long-press
+     **PAGE**) to open it.
+   - **Colour radios:** open the screen setup for the model (the **Screens**
+     settings, also reached with **TELE**), add a new main view with the
+     full-size **1x1** layout (turning off the top bar and sliders gives it
+     more room), choose **Setup widgets**, and pick **Tricky FPV**. Smaller
+     zones work too and show the score, last trick and combo.
 
-The script runs in the background as long as this model is selected, even when
-its screen isn't showing.
+It runs in the background as long as this model is selected, even when its
+screen isn't showing.
 
 ### Updating
 
 Copy the new files over the old ones, then **delete every `.luac` file** in
-`SCRIPTS/TRICKS/` and `SCRIPTS/TELEMETRY/trick.luac`. EdgeTX loads whichever of
+`SCRIPTS/TRICKS/`, `SCRIPTS/TELEMETRY/trick.luac` and `WIDGETS/TRICKY/`. EdgeTX loads whichever of
 `.lua`/`.luac` is newer, so an old compiled file can win over the new source.
 Then restart the radio.
 
@@ -209,6 +225,8 @@ Short clips (around a second) work best.
 
 ## Radio screen
 
+### Black-and-white radios
+
 Three pages. Press **ENTER** (or turn the wheel) to switch. The script jumps to
 the live page when you arm and to the summary when you disarm.
 
@@ -220,6 +238,17 @@ LAST  2X ROLL         1s       LOOP 1 SPIN 2 ORBIT 1          MSP OK   WRITES 14
 STYLE [██████░░░░]  +18        COMBO X3 STYLE 18              NAME MY WHOOP
 FM ok ATT 6 Hz MSP ok          CRASH 1 TIME 02:34
 ```
+
+### Colour radios
+
+The widget has the same three pages: live (big score, best, combo, last
+trick, style bar and this flight's tricks), flight summary and status. It
+switches to the live page when you arm and to the summary when you land.
+To flip pages yourself, put the widget in full screen mode (select it, press
+**ENTER**, choose **Full screen**; long-press **RTN** to leave) and press
+**ENTER**, turn the wheel, tap or swipe. In a smaller zone it shows the
+score, best, last trick and combo, with a status light (green: armed, grey:
+disarmed, red: no link or no flight mode).
 
 ## Tuning
 
@@ -302,15 +331,25 @@ make release V=1.0.0   # dist/tricky-sticks-fpv-1.0.0.zip (just SCRIPTS/)
   while it's shown. Its filename must stay at 6 characters or fewer.
 - `SCRIPTS/TRICKS/radio.lua`: sensors, sticks, sound and voice, high score
   file.
-- `SCRIPTS/TRICKS/ui.lua`: the three screen pages.
+- `SCRIPTS/TRICKS/ui.lua`: the three screen pages (black-and-white).
+- `WIDGETS/TRICKY/main.lua`: the colour-radio widget. A small entry point
+  that loads the same modules as `trick.lua` plus `ui_color.lua`.
+- `SCRIPTS/TRICKS/ui_color.lua`: the colour screen, which adapts to the
+  widget's size. Only colour radios load it.
 - `tests/globals.lua`: checks the radio scripts only use globals and library
-  functions that EdgeTX 2.9/2.10 has on black-and-white radios (no `table`
-  library, no `unpack`, no string methods).
+  functions EdgeTX 2.9/2.10 has: the black-and-white set for the shared code
+  and `trick.lua` (no `table` library, no `unpack`, no string methods), the
+  colour set for the widget files (no `lcd.getLastRightPos`).
 - `tests/run.lua`: unit tests with a small attitude simulator (rotation
   matrix → Betaflight-style Euler angles incl. yaw, sampled at a limited
   telemetry rate with latency; coordinated turns for orbits).
 - `tests/smoke.lua`: runs the wrapper in a sandbox with only the B&W EdgeTX
   libraries, EdgeTX's `io` API and stubbed radio functions.
+- `tests/widget.lua`: runs the widget with the colour EdgeTX API stubbed,
+  hidden and in ten zone sizes, and fails if any text runs outside the zone
+  or over other text (worst case: five-digit scores). It also checks the
+  black-and-white loader never loads colour-only code.
+  `WIDGET_SVG=<dir> lua tests/widget.lua` saves a picture of every layout.
 - `tests/fuzz.lua`: random inputs to catch runtime errors.
 - `tests/voice.lua`: checks the voice lines and clips match what the script
   looks for, in a format EdgeTX plays.

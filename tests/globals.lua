@@ -30,13 +30,33 @@ local LIBS = {
   io = set("open read write close seek"),   -- EdgeTX style: io.read(file, len)
 }
 
-local files = (arg and #arg > 0) and arg or {
+-- Colour radios (widget + its screen) have more: the table library, the
+-- colour lcd API (no getLastRightPos there; lcd.sizeText instead), colours
+-- and touch. Checked against EdgeTX 2.10/2.11 radio/src/lua/api_colorlcd.cpp
+-- and api_general.cpp.
+local COLOR_GLOBALS = set([[
+  table XXLSIZE CENTER VCENTER SHADOWED
+  EVT_TOUCH_FIRST EVT_TOUCH_BREAK EVT_TOUCH_SLIDE EVT_TOUCH_TAP
+]])
+for k in pairs(GLOBALS) do COLOR_GLOBALS[k] = true end
+local COLOR_LIBS = {}
+for k, v in pairs(LIBS) do COLOR_LIBS[k] = v end
+COLOR_LIBS.table = set("concat insert remove sort unpack")
+COLOR_LIBS.lcd = set([[clear drawText drawNumber drawFilledRectangle drawRectangle drawLine drawPoint
+  drawTimer drawGauge sizeText RGB setColor getColor drawCircle drawFilledCircle
+  drawTriangle drawFilledTriangle drawArc drawPie drawAnnulus exitFullScreen]])
+
+local BW = (arg and #arg > 0) and arg or {
   "SCRIPTS/TELEMETRY/trick.lua",
   "SCRIPTS/TRICKS/radio.lua",
   "SCRIPTS/TRICKS/ui.lua",
   "SCRIPTS/TRICKS/core.lua",
   "SCRIPTS/TRICKS/msp.lua",
   "SCRIPTS/TRICKS/config.lua",
+}
+local COLOR = (arg and #arg > 0) and {} or {
+  "WIDGETS/TRICKY/main.lua",
+  "SCRIPTS/TRICKS/ui_color.lua",
 }
 
 local bad = 0
@@ -45,6 +65,7 @@ local function report(f, line, msg)
   bad = bad + 1
 end
 
+local function check(files, GLOBALS, LIBS, label)
 for _, f in ipairs(files) do
   local p = assert(io.popen("luac -p -l '" .. f .. "' 2>&1"))
   local out = p:read("a")
@@ -59,14 +80,14 @@ for _, f in ipairs(files) do
     local sname = line:match("SETTABUP.-_ENV \"([%w_]+)\"")
     if reg then
       if not GLOBALS[name] then
-        report(f, line, "uses global '" .. name .. "', not on EdgeTX 2.10 B&W")
+        report(f, line, "uses global '" .. name .. "', not on EdgeTX " .. label)
       end
       if LIBS[name] then libReg, lib = reg, name else libReg, lib = nil, nil end
     else
       if sname then report(f, line, "assigns global '" .. sname .. "'") end
       local src, field = line:match("GETFIELD%s+%d+%s+(%d+)%s+%d+.-\"([%w_]+)\"")
       if lib and src == libReg and field and not LIBS[lib][field] then
-        report(f, line, "uses " .. lib .. "." .. field .. ", not on EdgeTX 2.10 B&W")
+        report(f, line, "uses " .. lib .. "." .. field .. ", not on EdgeTX " .. label)
       end
       if line:match("%sSELF%s") then
         report(f, line, "uses a method call (obj:fn()); string methods need LUA_ENABLE_STRLIB_MT")
@@ -75,9 +96,13 @@ for _, f in ipairs(files) do
     end
   end
 end
+end
+
+check(BW, GLOBALS, LIBS, "2.10 B&W")
+check(COLOR, COLOR_GLOBALS, COLOR_LIBS, "2.10 colour")
 
 if bad > 0 then
   print(bad .. " problem(s)")
   os.exit(1)
 end
-print("globals ok (" .. #files .. " files, EdgeTX 2.10 B&W library set)")
+print("globals ok (" .. #BW .. " B&W files, " .. #COLOR .. " colour files, EdgeTX 2.10 library sets)")
