@@ -297,6 +297,7 @@ likely to change:
 | `STYLE_W_*` | 0.4 / 0.3 / 0.3 | Change what counts as aggressive (sticks / throttle / punches). |
 | `CRASH_TILT` / `CRASH_TIME` | 70° / 1 s | False crashes during fast forward flight: raise either. |
 | `POINTS_*`, `MSG_*`, `NOUN_*` | | Your own scoring and wording. OSD text is 16 chars max including the score. |
+| `POINTS_*` = 0, `STYLE_POINTS` = 0 | | A trick keeps misfiring for you: switch it off (see below). |
 | `OSD` | true | `false` sends nothing to the quad: tricks only on the radio screen and in sound. |
 | `VOICE`, `VOICE_GENERIC`, `VOICE_SECS`, `VOICE_STYLE_GAP`, `VOICE_SCORE` | | Voice on/off, share of generic lines, how long a clip is assumed to last, how often "Sending it!" is said, the final score callout. |
 | `SRC_*` | `ail`, `ele`, `rud`, `thr` | Stick sources. Use channel outputs like `{ "ch1" }` if needed. |
@@ -305,6 +306,13 @@ likely to change:
 to watch). `NO CONFIRM` after a real trick means telemetry didn't see the
 rotation: check `ATT n Hz` first. Nothing at all means the sticks didn't add up
 to 300°: check your rates.
+
+**Switching a trick off:** set its points to 0 (`POINTS_JUICY = 0`, or
+`STYLE_POINTS = 0` for freestyle). It's then never detected: no OSD message,
+no sound, no combo, and it can't hold up the trick you fly next. Turning off
+Matty flips makes those count as back flips or power loops again; turning off
+any other trick means its move scores nothing. Useful when one trick keeps
+misfiring for you and tuning doesn't fix it.
 
 ## Known limitations
 

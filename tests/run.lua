@@ -650,6 +650,68 @@ test("flight summary counts", function()
   eq(s.text, nil, "original name restored")
 end)
 
+print("Switching tricks off (0 points)")
+
+-- Each trick flown with its points at 0: nothing at all after arming.
+local OFF = {
+  { "POINTS_ROLL", function(s) s:run(0.6, 1, 0, 0.5) end },
+  { "POINTS_FRONTFLIP", function(s) s:run(0.6, 0, 1, 0.3) end },
+  { "POINTS_SPIN", function(s) s:run(0.6, 0, 0, 0.4, 1) end },
+  { "POINTS_JUICY", function(s) juicy(s, 1) end },
+  { "POINTS_ORBIT", function(s)
+    s:setAttitude(30, 0); s.earthYawRate = 120; s:run(3.2, 0, 0, 0.5)
+    s.earthYawRate = 0; s:setAttitude(0, 0) end },
+  { "STYLE_POINTS", function(s) aggressive(s, 10.5) end },
+}
+for _, o in ipairs(OFF) do
+  test(o[1] .. " = 0 switches it off", function()
+    local s = Sim.new(core, config({ [o[1]] = 0 }))
+    s:armAndHover()
+    o[2](s)
+    s:run(1.5)
+    eq(#s.events, 1, "events after arming")
+    eq(s.S.score, 0, "score")
+    eq(s.text, "SCORE 0", "osd")
+  end)
+end
+
+test("back flips and loops off: the moves score nothing", function()
+  local s = Sim.new(core, config({ POINTS_BACKFLIP = 0, POINTS_LOOP = 0, POINTS_MATTY = 0 }))
+  s:armAndHover()
+  s:run(0.6, 0, -1, 0.3); s:run(1.5)
+  s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5)
+  eq(#s.events, 1, "events after arming")
+  eq(s.text, "SCORE 0", "osd")
+end)
+
+test("Matty flips off: the move is a back flip again", function()
+  local s = Sim.new(core, config({ POINTS_MATTY = 0 }))
+  s:armAndHover()
+  matty(s, 0.6); s:run(1.5)
+  eq(s:count(E.EV_MATTY), 0, "Matty flips")
+  eq(s:count(E.EV_BACK), 1, "back flips")
+end)
+
+test("back flips off, Matty flips on: Matty still scores, back flips don't", function()
+  local s = Sim.new(core, config({ POINTS_BACKFLIP = 0 }))
+  s:armAndHover()
+  matty(s, 0.6); s:run(1.5)
+  eq(s:count(E.EV_MATTY), 1, "Matty flips")
+  s:run(0.6, 0, -1, 0.3); s:run(1.5)
+  eq(s:count(E.EV_BACK) + s:count(E.EV_MISS), 0, "back flip silent")
+  eq(s.S.score, 50, "score")
+end)
+
+test("a trick that is off doesn't hold up the next one", function()
+  local s = Sim.new(core, config({ POINTS_ROLL = 0 }))
+  s:armAndHover()
+  s:run(0.6, 1, 0, 0.5)          -- roll (off), then straight into a front flip
+  s:run(0.6, 0, 1, 0.5); s:run(1.0)
+  eq(s:count(E.EV_ROLL), 0, "rolls")
+  eq(s:count(E.EV_FRONT), 1, "front flip scored")
+  eq(s.text, "FRONT FLIP! 25", "osd")
+end)
+
 print("Helpers")
 
 test("parseArmed", function()

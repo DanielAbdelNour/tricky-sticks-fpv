@@ -5,7 +5,10 @@
 
 return {
   ---------------------------------------------------------------------------
-  -- Points (per rotation; multiplied by the combo multiplier)
+  -- Points (per rotation; multiplied by the combo multiplier).
+  -- 0 switches a trick off: it's never detected, so no OSD message, sound or
+  -- combo, and it can't get in the way of other tricks. Handy if one keeps
+  -- misfiring for you. (Matty flips off: those count as back flips / loops.)
   ---------------------------------------------------------------------------
   POINTS_ROLL       = 10,
   POINTS_FRONTFLIP  = 25,
@@ -15,7 +18,7 @@ return {
   POINTS_ORBIT      = 30,        -- full banked 360 turn
   POINTS_MATTY      = 50,        -- Matty flip (back flip that hangs inverted)
   POINTS_JUICY      = 35,        -- juicy flick (half flip and back)
-  STYLE_POINTS      = 10,        -- max freestyle points per STYLE_PERIOD
+  STYLE_POINTS      = 10,        -- max freestyle points per STYLE_PERIOD (0 = off)
   CRASH_PENALTY     = 0,         -- points subtracted on a crash (0 = none)
 
   ---------------------------------------------------------------------------

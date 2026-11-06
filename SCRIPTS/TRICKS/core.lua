@@ -465,8 +465,13 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     elseif settled and S.lastInvT >= S.pendWin and S.lastUpT > S.lastInvT then
       -- A back rotation that paused inverted in its (last) inverted episode
       -- is a Matty flip
-      if (p == M.EV_BACK or p == M.EV_LOOP) and S.hangOkT >= S.pendWin then
+      if (p == M.EV_BACK or p == M.EV_LOOP) and S.hangOkT >= S.pendWin
+          and S.points[M.EV_MATTY] > 0 then
         return award(S, t, M.EV_MATTY, 1)
+      end
+      if S.points[p] <= 0 then      -- opened only in case it was a Matty flip
+        S.pending = 0
+        return M.EV_NONE
       end
       local n = episodesSince(S, S.pendWin)
       if n > S.pendCount then n = S.pendCount end
@@ -497,11 +502,12 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
       S.pendT, S.pendCount, S.pendDir, S.jfDir = t, 1, -S.jfDir, 0
       clearSticks(S)
     end
-  elseif abs(ss[C_PITCH]) >= cfg.JUICY_DEG then
+  elseif abs(ss[C_PITCH]) >= cfg.JUICY_DEG and S.points[M.EV_JUICY] > 0 then
     S.jfDir, S.pendYaw, S.pendT = ss[C_PITCH] > 0 and 1 or -1, abs(ss[C_PITCH]), t
   end
 
-  -- Open a candidate
+  -- Open a candidate (not for tricks switched off with 0 points; a back
+  -- rotation still opens one while Matty flips are on)
   if S.pending == 0 and t >= S.cooldownUntil and not S.crashLatched
       and t - S.lastThrT <= cfg.THR_RECENT then
     local ar, ap, ay = abs(ss[C_ROLL]), abs(ss[C_PITCH]), abs(ss[C_YAW])
@@ -524,7 +530,9 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
       local thrAvg = sl[C_DT] > 0 and sl[C_THR] / sl[C_DT] or 0
       cand = (thrAvg >= cfg.LOOP_THR_AVG) and M.EV_LOOP or M.EV_BACK
     end
-    if cand ~= 0 then
+    local pts = S.points
+    if cand ~= 0 and (pts[cand] > 0 or ((cand == M.EV_BACK or cand == M.EV_LOOP)
+        and pts[M.EV_MATTY] > 0)) then
       if cand == M.EV_LOOP then win = cfg.LOOP_WINDOW end
       S.pending, S.pendT, S.pendWin = cand, t, t - win
       S.pendCount, S.pendDir = 1, dir
@@ -548,7 +556,7 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
   end
 
   -- Orbit: banked turn with a continuous 360 heading change
-  if attOk and not S.crashLatched then
+  if attOk and not S.crashLatched and S.points[M.EV_ORBIT] > 0 then
     local bank = S.lastRollD
     local ok = abs(bank) >= cfg.ORBIT_MIN_BANK and abs(bank) <= 90
       and abs(S.lastPitchD) <= cfg.ORBIT_MAX_PITCH and t - S.lastThrT <= cfg.THR_RECENT
@@ -585,7 +593,8 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     local attRate = S.stAtt / P
     S.styleNow = style
     resetStyle(S)
-    if style >= cfg.STYLE_MIN and attRate >= cfg.STYLE_MIN_ATT_RATE and not S.crashLatched then
+    if style >= cfg.STYLE_MIN and attRate >= cfg.STYLE_MIN_ATT_RATE and not S.crashLatched
+        and cfg.STYLE_POINTS > 0 then
       local pts = floor(cfg.STYLE_POINTS * (style - cfg.STYLE_MIN) / (1 - cfg.STYLE_MIN) + 0.5)
       if pts < 1 then pts = 1 end
       S.score = S.score + pts
