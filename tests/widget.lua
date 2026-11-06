@@ -89,10 +89,8 @@ env.getTime = function() return now end
 env.getRSSI = function() return 100 end
 env.getFieldInfo = function(name) if ids[name] then return { id = ids[name] } end end
 env.getValue = function(id) return values[names[id]] end
-local played, tonesPlayed, numbers = {}, 0, {}
-env.playHaptic = function() end
-env.playTone = function() tonesPlayed = tonesPlayed + 1 end
-env.playNumber = function(v) numbers[#numbers + 1] = v end
+local played = {}
+for _, k in ipairs({ "playTone", "playNumber", "playHaptic" }) do env[k] = function() end end
 env.playFile = function(path)
   assert(#path <= 42, "EdgeTX ignores audio paths over 42 chars: " .. path)
   assert(io.open("." .. path, "rb"), "played a clip that doesn't exist: " .. path)
@@ -116,7 +114,6 @@ env.SMLSIZE, env.MIDSIZE, env.DBLSIZE, env.XXLSIZE = FONT.XS, FONT.L, FONT.XL, F
 env.RIGHT, env.CENTER, env.BLINK, env.INVERS, env.BOLD = RIGHT, CENTER, BLINK, 1, 0x100
 env.LCD_W, env.LCD_H = 480, 320                 -- Jumper T15
 env.EVT_VIRTUAL_ENTER, env.EVT_VIRTUAL_NEXT, env.EVT_VIRTUAL_PREV = 100, 101, 102
-env.EVT_VIRTUAL_ENTER_LONG = 103
 env.EVT_TOUCH_FIRST, env.EVT_TOUCH_BREAK, env.EVT_TOUCH_SLIDE, env.EVT_TOUCH_TAP = 200, 201, 202, 203
 
 -- WIDGET_SVG=<dir> lua tests/widget.lua  writes a picture of each layout
@@ -273,30 +270,7 @@ drawAll()
 
 assert(#played > 0, "announcer clips played from the widget")
 
--- Sound test button on the STATUS page (full screen): hold ENTER, or tap it
-step(2, 0)          -- let the stress state above land (it was "armed" while disarmed)
-while radio.page ~= 3 do drawAll(env.EVT_VIRTUAL_NEXT) end
-local p0, t0 = #played, tonesPlayed
-texts = {}
-drawAll(env.EVT_VIRTUAL_ENTER_LONG)
-assert(texts["STATUS"], "holding ENTER stays on the STATUS page")
-assert(texts["26 CALLOUTS"], "STATUS page shows the voice clips found")
-assert(#played == p0 + 1 and played[#played]:match("arm/%d+%.wav$"), "test part 1: an arm callout")
-assert(tonesPlayed == t0, "test part 1: no beep before the clip")
-texts = {}
-drawAll(env.EVT_VIRTUAL_ENTER)                   -- the release right after: ignored
-assert(texts["STATUS"], "ENTER release after the test doesn't change page")
-now = now + 300                                  -- 3 s later: part 2
-drawAll()
-assert(#played == p0 + 2 and tonesPlayed == t0 + 1 and numbers[#numbers] == 42,
-  "test part 2: beep, clip, number")
-texts = {}
--- the button, bottom right, where the last full screen draw (480x272) put it
-drawAll(env.EVT_TOUCH_TAP, { x = 460, y = 230 })
-assert(#played == p0 + 3 and texts["STATUS"], "tapping the button runs the test")
-texts = {}
-drawAll(env.EVT_TOUCH_TAP, { x = 20, y = 100 })  -- elsewhere: next page
-assert(texts["TRICKY STICKS FPV"], "tapping elsewhere still changes page")
+step(2, 0)          -- land with the stress state: summary with a five-digit NEW best
 
 assert(#osd > 0, "OSD text written over MSP")
 assert(files["/SCRIPTS/TRICKS/best.txt"] ~= "5", "best score saved")

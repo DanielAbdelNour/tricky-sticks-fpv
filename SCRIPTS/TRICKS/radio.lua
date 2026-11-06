@@ -7,7 +7,7 @@
 -- global `unpack`; see tests/globals.lua). Memory is tight on these radios,
 -- so state the screen needs is kept as fields of R instead of extra tables.
 
-local R = { page = 1, linkUp = false, attOk = false, attHz = 0, voices = 0, said = 0 }
+local R = { page = 1, linkUp = false, attOk = false, attHz = 0 }
 local cfg, core, msp, D, N
 local idRoll, idPitch, idYaw, idThr, idAttP, idAttR, idAttY, idFM
 local lastLookup, lastTick, hadLink = -1e9, -1, false
@@ -65,7 +65,7 @@ end
 -- Both stay below 2^24: EdgeTX 2.11+ runs Lua 5.3 with 32-bit floats, which
 -- hold whole numbers exactly only up to 2^24 (16.7 million). Bigger packed
 -- numbers lose their low bits there and the script picks clips that don't
--- exist (silence). See tests/voice.lua.
+-- exist (silence). tests/widget.lua and tests/voice.lua check this.
 ---------------------------------------------------------------------------
 local VOICE_DIRS = "roll roll2 roll3 front front2 front3 back back2 back3 loop spin spin2 " ..
                    "spin3 orbit style fullsend combo2 combo3 combo4 combo5 best crash arm " ..
@@ -92,12 +92,8 @@ local function scanVoices()
       if cs > scanCs then scanCs = cs > 255 and 255 or cs end
     end
     if scanN >= VOICE_MAX then
-      if scanMask > 0 then
-        vClips[scanDir] = scanMask + scanCs * B16
-        R.voices = R.voices + 1         -- callouts with clips (STATUS page)
-      end
+      if scanMask > 0 then vClips[scanDir] = scanMask + scanCs * B16 end
       scanDir, scanN, scanMask, scanCs = scanNext(), 0, 0, 0
-      R.voiceDone = scanDir == nil
     end
   end
 end
@@ -135,9 +131,7 @@ end
 local function say(t, d, force)
   local info = vClips[d]
   if not info or (t < voiceUntil and not force) then return false end
-  local path = cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav"
-  playFile(path)
-  R.said, R.lastClip = R.said + 1, path     -- STATUS page (colour)
+  playFile(cfg.VOICE_DIR .. d .. "/" .. pick(d) .. ".wav")
   if t > voiceUntil then voiceUntil = t end
   voiceUntil = voiceUntil + floor(info / B16) / 100 + 0.1
   return true
@@ -252,9 +246,6 @@ function R.tick()
 
   if N then msp.nameTick(N, t, core.osdText(D, t), linkUp) end
 end
-
--- Sound test (colour STATUS page): a callout through the same code as a trick.
-function R.say(d) return say(getTime() / 100, d, true) end
 
 -- load(name) loads a module from /SCRIPTS/TRICKS/ (see trick.lua).
 function R.init(load)

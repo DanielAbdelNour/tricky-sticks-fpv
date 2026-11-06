@@ -249,11 +249,7 @@ To flip pages yourself, put the widget in full screen mode (select it, press
 score, best, last trick and combo, with a status light (green: armed, grey:
 disarmed, red: no link or no flight mode).
 
-**No voice?** The STATUS page shows how many callouts have clips (**VOICE**),
-how many clips the script has played and the last one. In full screen mode,
-tap **TEST SOUND** (or hold **ENTER**) to hear an arm callout, then 3 s later
-a beep, a clip and a number in the radio's own voice. If none of them play,
-check SYS → Sound (Mode not **Quiet**, Wav volume up).
+**No voice?** Check SYS → Sound: Mode not **Quiet**, and Wav volume up.
 
 ## Tuning
 
