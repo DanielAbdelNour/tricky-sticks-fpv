@@ -98,10 +98,10 @@ with your radio, EdgeTX version and the **MEM** number from the STATUS page.
 | Trick | Points | OSD text | How it's detected |
 |-------|--------|----------|-------------------|
 | Roll | 10 | `NICE ROLL!` | roll stick commands ~300° in 1.2 s, **and** telemetry sees the quad inverted, then upright again |
-| Front flip | 25 | `FRONT FLIP!` | same, pitch stick forward |
+| Front flip | 25 | `FRONT FLIP!` | same, pitch stick forward, throttle low |
 | Back flip | 25 | `BACK FLIP!` | same, pitch stick back, throttle low |
 | Power loop | 40 | `POWER LOOP!` | back-pitch rotation (up to 2.5 s) with throttle averaging 50% or more, inverted then upright |
-| Matty flip | 50 | `MATTY FLIP!` | a back flip or loop (up to 2.5 s) that pauses inverted: telemetry inverted with the pitch stick released for 0.3 s or more |
+| Matty flip | 50 | `MATTY FLIP!` | front-pitch rotation (up to 2.5 s) with throttle averaging 50% or more, inverted then upright: the front-flip version of a power loop |
 | Juicy flick | 35 | `JUICY FLICK!` | pitch stick commands 150° one way, then back to within 60° of where it started within 1.5 s; telemetry sees the quad inverted, then upright |
 | Double / triple | ×2 / ×3 | `DOUBLE ROLL!`, `TRIPLE FRONT!` | each extra 360° of stick, capped by how many separate times telemetry saw the quad inverted (for spins: by telemetry yaw) |
 | Yaw spin | 15 | `SPIN!` | yaw stick commands ~300°, telemetry yaw turns 270° or more |
@@ -122,7 +122,7 @@ resets every time you arm. On disarm the original craft name is put back.
    (`!FS!`) counts as not armed. For 2 s after arming nothing counts.
 2. **Sticks propose.** Stick positions are turned into rotation rates (your max
    rate × stick, with a little expo) and added up over sliding windows (1.2 s,
-   and 2.5 s for slow loops). At 300° the script opens a *candidate* for the
+   and 2.5 s for slow loops and Matty flips). At 300° the script opens a *candidate* for the
    axis and direction. This also needs throttle above 5% at some point in the
    last 1.5 s.
 3. **Telemetry confirms.** Rolls, flips and loops only score if attitude
@@ -131,7 +131,7 @@ resets every time you arm. On disarm the original craft name is put back.
    from the up vector `cos(pitch)·cos(roll)` rather than from pitch alone.
    Spins need the telemetry yaw to actually turn. The trick is only scored once
    you release the stick, so doubles and triples aren't cut short. No
-   confirmation within 1 s (1.5 s for loops) means no points (the screen shows
+   confirmation within 1 s (1.5 s for loops and Matty flips) means no points (the screen shows
    `NO CONFIRM`).
 4. **Cooldown.** After a trick scores, new candidates are ignored for 0.5 s, so
    one sloppy 1.5 rotation counts once.
@@ -140,17 +140,14 @@ resets every time you arm. On disarm the original craft name is put back.
 with throttle averaging 50% or more is a power loop, and with less it's a back
 flip. Tune `LOOP_THR_AVG` to match how you fly them.
 
-**Matty flips** are told apart from back flips and loops by the pause. You
-pitch back to inverted, let go of the pitch stick and float, then pitch back
-again to finish the flip. If telemetry shows the quad inverted while the pitch
-stick is released (under `SETTLE_FRAC`) for at least `MATTY_HANG` (0.3 s), the
-rotation scores as a Matty flip whatever the throttle did. In a plain back flip
-or loop you hold the stick through the inverted part, so there's no pause.
-Telemetry is sampled, so at 5 Hz the pause you fly needs to be about 0.45 s
-before 0.3 s of it shows up. Two limits: the whole trick has to fit in 2.5 s
-(`LOOP_WINDOW`), and floating inverted with the sticks centred for more than
-1 s (`CRASH_TIME`) counts as a crash, because from the attitude it looks just
-like lying upside down after one.
+**Matty flips** are the front-flip version of a power loop: you fly at a
+raised bar, flip forward slowly over it with the top of the quad facing the
+bar, and come back under it flying backwards. Throttle stays up the whole way,
+because that's what pulls the quad round the bar. So the same front-pitch
+rotation with throttle averaging 50% or more (`LOOP_THR_AVG`) is a Matty flip,
+and with less it's a front flip. It can take up to 2.5 s (`LOOP_WINDOW`). The
+script can't see the bar: it only knows the sticks and the quad's angles, so a
+forward power loop in open air counts too.
 
 **Juicy flicks** go out and back: a half flip (forward or back) to inverted
 for a look back, then a flick back the way you came, ending upright. The
@@ -287,9 +284,8 @@ likely to change:
 | `INVERTED_TILT` | 110 | Tricks show `NO CONFIRM` even though they were clean: lower to ~100, or raise the ELRS telemetry ratio. |
 | `UPRIGHT_TILT` | 60 | You exit flips at a steep angle: raise it. |
 | `SETTLE_FRAC` | 0.25 | Tricks score late because you keep some stick in afterwards: raise it. |
-| `LOOP_THR_AVG` | 0.5 | Power loops register as back flips: lower it. Punchy back flips register as loops: raise it. |
+| `LOOP_THR_AVG` | 0.5 | Power loops or Matty flips register as back or front flips: lower it. Punchy flips register as loops or Matty flips: raise it. |
 | `JUICY_DEG` / `JUICY_TIME` | 150° / 1.5 s | Juicy flicks missed: lower `JUICY_DEG` a little, or raise `JUICY_TIME` if you look back for long. |
-| `MATTY_HANG` | 0.3 s | Matty flips register as back flips: lower it (not much under 0.2 s). Ordinary back flips register as Matty flips: raise it. |
 | `SPIN_CONFIRM_DEG` | 270 | Spins show `NO CONFIRM`: lower it. |
 | `ORBIT_MIN_BANK` / `ORBIT_MIN_TIME` | 15° / 1.5 s | Orbits not counted: lower them. Ordinary turns counted: raise them. |
 | `COMBO_WINDOW` / `COMBO_MAX` | 3 s / 5 | Make combos easier or harder. |
@@ -310,7 +306,7 @@ to 300°: check your rates.
 **Switching a trick off:** set its points to 0 (`POINTS_JUICY = 0`, or
 `STYLE_POINTS = 0` for freestyle). It's then never detected: no OSD message,
 no sound, no combo, and it can't hold up the trick you fly next. Turning off
-Matty flips makes those count as back flips or power loops again; turning off
+Matty flips makes those count as front flips; turning off
 any other trick means its move scores nothing. Useful when one trick keeps
 misfiring for you and tuning doesn't fix it.
 

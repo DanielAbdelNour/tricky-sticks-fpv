@@ -8,7 +8,7 @@ return {
   -- Points (per rotation; multiplied by the combo multiplier).
   -- 0 switches a trick off: it's never detected, so no OSD message, sound or
   -- combo, and it can't get in the way of other tricks. Handy if one keeps
-  -- misfiring for you. (Matty flips off: those count as back flips / loops.)
+  -- misfiring for you. (Matty flips off: those count as front flips.)
   ---------------------------------------------------------------------------
   POINTS_ROLL       = 10,
   POINTS_FRONTFLIP  = 25,
@@ -16,7 +16,7 @@ return {
   POINTS_LOOP       = 40,        -- power loop
   POINTS_SPIN       = 15,        -- 360 yaw spin
   POINTS_ORBIT      = 30,        -- full banked 360 turn
-  POINTS_MATTY      = 50,        -- Matty flip (back flip that hangs inverted)
+  POINTS_MATTY      = 50,        -- Matty flip (front flip with throttle held up)
   POINTS_JUICY      = 35,        -- juicy flick (half flip and back)
   STYLE_POINTS      = 10,        -- max freestyle points per STYLE_PERIOD (0 = off)
   CRASH_PENALTY     = 0,         -- points subtracted on a crash (0 = none)
@@ -82,11 +82,12 @@ return {
   COMBO_MAX         = 5,         -- highest combo multiplier
 
   ---------------------------------------------------------------------------
-  -- Power loops: back-pitch rotation with throttle held up
+  -- Power loops (back) and Matty flips (front): pitch rotation with
+  -- throttle held up
   ---------------------------------------------------------------------------
   LOOP_THR_AVG      = 0.5,       -- average throttle (0..1) during the rotation
   LOOP_WINDOW       = 2.5,       -- slow rotations up to this long still count
-  LOOP_CANDIDATE_DEG = 300,      -- commanded back-pitch within LOOP_WINDOW
+  LOOP_CANDIDATE_DEG = 300,      -- commanded pitch within LOOP_WINDOW
   LOOP_CONFIRM_TIME = 1.5,
 
   ---------------------------------------------------------------------------
@@ -94,12 +95,6 @@ return {
   ---------------------------------------------------------------------------
   SPIN_CANDIDATE_DEG = 300,      -- commanded yaw rotation within WINDOW
   SPIN_CONFIRM_DEG  = 270,       -- telemetry yaw rotation needed for one spin
-
-  ---------------------------------------------------------------------------
-  -- Matty flips: back flip to inverted, pause there (pitch stick released),
-  -- then finish the flip. The whole trick has to fit in LOOP_WINDOW.
-  ---------------------------------------------------------------------------
-  MATTY_HANG        = 0.3,       -- inverted with pitch below SETTLE_FRAC this long
 
   ---------------------------------------------------------------------------
   -- Juicy flicks: half flip (pitch) to inverted, then flick back the way you

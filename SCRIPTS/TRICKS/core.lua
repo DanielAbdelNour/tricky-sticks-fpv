@@ -31,7 +31,7 @@ M.EV_SPIN   = 10  -- yaw spin
 M.EV_ORBIT  = 11  -- banked 360 turn
 M.EV_STYLE  = 12  -- freestyle aggression points
 M.EV_BEST   = 13  -- passed the saved high score this flight
-M.EV_MATTY  = 14  -- Matty flip: back flip with a pause while inverted
+M.EV_MATTY  = 14  -- Matty flip: front flip with throttle held up (over a bar)
 M.EV_JUICY  = 15  -- juicy flick: half flip to inverted, then back the way it came
 M.NUM_EV    = 15
 
@@ -166,7 +166,7 @@ function M.new(cfg)
     },
     counts = {},                 -- per-flight event counts (summary)
     epEnd = { -1e9, -1e9, -1e9, -1e9 }, epIdx = 1, inInv = false,
-    hangT = 0, hangOkT = -1e9, jfDir = 0,
+    jfDir = 0,
     lastT = nil,
     armed = false, armT = 0, score = 0, turtle = false, turtleChecked = false,
     z = 1, lastInvT = -1e9, lastUpT = -1e9, tiltSince = nil,
@@ -281,7 +281,7 @@ local function startFlight(S, t)
   S.cooldownUntil = -1e9
   S.lastInvT, S.lastUpT = -1e9, -1e9
   for i = 1, 4 do S.epEnd[i] = -1e9 end
-  S.hangT, S.hangOkT, S.jfDir = 0, -1e9, 0
+  S.jfDir = 0
   for i = 1, M.NUM_EV do S.counts[i] = 0 end
   S.combo, S.bestCombo, S.lastTrickT = 0, 0, -1e9
   S.bestAnnounced, S.bestQueued, S.newBest = false, false, false
@@ -311,15 +311,11 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     local zt = S.zt
     if z < zt[Z_INV] then
       S.lastInvT = t
-      if not S.inInv then
-        S.epIdx = S.epIdx % 4 + 1
-        S.hangOkT = -1e9   -- a hang only counts for the episode it happened in
-      end
+      if not S.inInv then S.epIdx = S.epIdx % 4 + 1 end
       S.epEnd[S.epIdx] = t
       S.inInv = true
     else
       S.inInv = false
-      S.hangT = 0
     end
     if z > zt[Z_UP] then S.lastUpT = t end
     if z < zt[Z_CRASH] then
@@ -416,14 +412,6 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
   end
   local ss, sl = S.ss, S.sl
 
-  -- Matty flip hang: inverted (telemetry) with the pitch stick released
-  if attOk and S.inInv and abs(fp) < cfg.SETTLE_FRAC then
-    S.hangT = S.hangT + dt
-    if S.hangT >= cfg.MATTY_HANG then S.hangOkT = t end
-  else
-    S.hangT = 0
-  end
-
   -- Freestyle accumulators
   S.stStk = S.stStk + (abs(sRoll) + abs(sPitch) + abs(sYaw)) * dt
   S.stThr = S.stThr + thr * dt
@@ -437,7 +425,7 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
   if p ~= 0 then
     local axis, f = C_PITCH, fp
     if p == M.EV_ROLL then axis, f = C_ROLL, fr elseif p == M.EV_SPIN then axis, f = C_YAW, fy end
-    if p ~= M.EV_LOOP and p ~= M.EV_JUICY and ss[axis] * S.pendDir >= cfg.MULTI_DEG
+    if p ~= M.EV_LOOP and p ~= M.EV_MATTY and p ~= M.EV_JUICY and ss[axis] * S.pendDir >= cfg.MULTI_DEG
         and S.pendCount < cfg.MAX_ROTATIONS then
       S.pendCount = S.pendCount + 1
       S.pendT = t
@@ -448,7 +436,8 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
       end
     end
     local settled = abs(f) < cfg.SETTLE_FRAC
-    local limit = (p == M.EV_LOOP) and cfg.LOOP_CONFIRM_TIME or cfg.CONFIRM_TIME
+    local limit = (p == M.EV_LOOP or p == M.EV_MATTY) and cfg.LOOP_CONFIRM_TIME
+                  or cfg.CONFIRM_TIME
     if p == M.EV_SPIN then
       -- Telemetry yaw lags the sticks: wait until it has seen every commanded
       -- rotation; at the deadline, score what it did see.
@@ -463,16 +452,6 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
         return award(S, t, p, seen)
       end
     elseif settled and S.lastInvT >= S.pendWin and S.lastUpT > S.lastInvT then
-      -- A back rotation that paused inverted in its (last) inverted episode
-      -- is a Matty flip
-      if (p == M.EV_BACK or p == M.EV_LOOP) and S.hangOkT >= S.pendWin
-          and S.points[M.EV_MATTY] > 0 then
-        return award(S, t, M.EV_MATTY, 1)
-      end
-      if S.points[p] <= 0 then      -- opened only in case it was a Matty flip
-        S.pending = 0
-        return M.EV_NONE
-      end
       local n = episodesSince(S, S.pendWin)
       if n > S.pendCount then n = S.pendCount end
       if n < 1 then n = 1 end
@@ -506,34 +485,32 @@ function M.update(S, t, armed, sRoll, sPitch, sYaw, thr, attOk, aPitch, aRoll, a
     S.jfDir, S.pendYaw, S.pendT = ss[C_PITCH] > 0 and 1 or -1, abs(ss[C_PITCH]), t
   end
 
-  -- Open a candidate (not for tricks switched off with 0 points; a back
-  -- rotation still opens one while Matty flips are on)
+  -- Open a candidate (not for tricks switched off with 0 points)
   if S.pending == 0 and t >= S.cooldownUntil and not S.crashLatched
       and t - S.lastThrT <= cfg.THR_RECENT then
     local ar, ap, ay = abs(ss[C_ROLL]), abs(ss[C_PITCH]), abs(ss[C_YAW])
     local cand, dir, win = 0, 1, cfg.WINDOW
+    local pts = S.points
     if ay >= cfg.SPIN_CANDIDATE_DEG and ay >= ar and ay >= ap then
       cand, dir = M.EV_SPIN, (ss[C_YAW] > 0) and 1 or -1
     elseif ar >= cfg.CANDIDATE_DEG and ar >= ap then
       cand, dir = M.EV_ROLL, (ss[C_ROLL] > 0) and 1 or -1
-    elseif ap >= cfg.CANDIDATE_DEG then
-      if ss[C_PITCH] > 0 then
-        cand = M.EV_FRONT
+    elseif ap >= cfg.CANDIDATE_DEG or abs(sl[C_PITCH]) >= cfg.LOOP_CANDIDATE_DEG then
+      -- Pitch rotation, fast (WINDOW) or slow (LOOP_WINDOW). With throttle
+      -- held up, a back one is a power loop and a front one a Matty flip
+      -- (a front flip if Matty flips are off).
+      local s = ss
+      if ap < cfg.CANDIDATE_DEG then s, win = sl, cfg.LOOP_WINDOW end
+      local held = s[C_DT] > 0 and s[C_THR] / s[C_DT] >= cfg.LOOP_THR_AVG
+      if s[C_PITCH] > 0 then
+        cand = (held and pts[M.EV_MATTY] > 0) and M.EV_MATTY or M.EV_FRONT
       else
         dir = -1
-        local thrAvg = ss[C_DT] > 0 and ss[C_THR] / ss[C_DT] or 0
-        cand = (thrAvg >= cfg.LOOP_THR_AVG) and M.EV_LOOP or M.EV_BACK
+        cand = held and M.EV_LOOP or M.EV_BACK
       end
-    elseif sl[C_PITCH] <= -cfg.LOOP_CANDIDATE_DEG then
-      -- slow back-pitch rotation (up to LOOP_WINDOW): power loop or slow back flip
-      dir, win = -1, cfg.LOOP_WINDOW
-      local thrAvg = sl[C_DT] > 0 and sl[C_THR] / sl[C_DT] or 0
-      cand = (thrAvg >= cfg.LOOP_THR_AVG) and M.EV_LOOP or M.EV_BACK
     end
-    local pts = S.points
-    if cand ~= 0 and (pts[cand] > 0 or ((cand == M.EV_BACK or cand == M.EV_LOOP)
-        and pts[M.EV_MATTY] > 0)) then
-      if cand == M.EV_LOOP then win = cfg.LOOP_WINDOW end
+    if cand ~= 0 and pts[cand] > 0 then
+      if cand == M.EV_LOOP or cand == M.EV_MATTY then win = cfg.LOOP_WINDOW end
       S.pending, S.pendT, S.pendWin = cand, t, t - win
       S.pendCount, S.pendDir = 1, dir
       S.pendYaw = ss[C_YAWATT]

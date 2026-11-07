@@ -401,78 +401,78 @@ test("same rotation with low throttle is a back flip", function()
   eq(s:count(E.EV_BACK), 1, "back flips")
 end)
 
--- Half back flip, hang inverted with the pitch stick released, finish the flip
-local function matty(s, hang, thr2)
-  s:run(0.3, 0, -1, 0.4)             -- 180 deg back: inverted
-  s:run(hang, 0, 0, 0.2)             -- float
-  s:run(0.3, 0, -1, thr2 or 0.5)     -- the other 180 deg
+-- Front flip with throttle held up (around a bar)
+local function matty(s, secs, stick, thr)
+  s:run(secs or 1.3, 0, stick or 0.6, thr or 0.85)
 end
 
-test("Matty flip: back flip with a pause inverted scores 50", function()
+test("Matty flip: front flip with throttle held up scores 50", function()
   local s = Sim.new(core, config())
   s:armAndHover()
-  matty(s, 0.6)
-  s:run(0.3, 0, 0, 0.4)
+  matty(s)
+  s:run(0.3, 0, 0, 0.5)
   eq(s.text, "MATTY FLIP! 50", "osd")
-  s:run(1.2, 0, 0, 0.4)
+  s:run(1.2, 0, 0, 0.5)
   eq(s:count(E.EV_MATTY), 1, "Matty flips")
-  eq(s:count(E.EV_BACK), 0, "not a back flip")
-  eq(s:count(E.EV_CRASH), 0, "the hang isn't a crash")
+  eq(s:count(E.EV_FRONT), 0, "not a front flip")
+  eq(s:count(E.EV_CRASH), 0, "crashes")
   eq(s.S.score, 50, "score")
   eq(s.S.counts[E.EV_MATTY], 1, "summary count")
 end)
 
-test("Matty flip with a throttle punch is not a power loop", function()
+test("slow Matty flip (long window), and a fast one", function()
   local s = Sim.new(core, config())
   s:armAndHover()
-  matty(s, 0.6, 1.0)
-  s:run(1.5, 0, 0, 0.5)
-  eq(s:count(E.EV_MATTY), 1, "Matty flips")
-  eq(s:count(E.EV_LOOP), 0, "loops")
+  matty(s, 1.8, 0.45, 0.8); s:run(1.5, 0, 0, 0.5)
+  eq(s:count(E.EV_MATTY), 1, "slow")
+  matty(s, 0.6, 1, 0.8); s:run(1.5, 0, 0, 0.5)
+  eq(s:count(E.EV_MATTY), 2, "fast")
+  eq(s:count(E.EV_FRONT), 0, "front flips")
 end)
 
-test("Matty flip: long hang (long window) and slower halves", function()
+test("Matty flip with 5 Hz / 150 ms and 10 Hz / 50 ms telemetry", function()
+  for _, o in ipairs({ { attHz = 5, latency = 0.15 }, { attHz = 10, latency = 0.05 } }) do
+    local s = Sim.new(core, config(), o)
+    s:armAndHover()
+    matty(s); s:run(1.5, 0, 0, 0.5)
+    matty(s, 1.8, 0.45, 0.8); s:run(1.5, 0, 0, 0.5)
+    eq(s:count(E.EV_MATTY), 2, "Matty flips at " .. o.attHz .. " Hz")
+  end
+end)
+
+test("the same rotation with low throttle is a front flip", function()
   local s = Sim.new(core, config())
   s:armAndHover()
-  matty(s, 0.9)
-  s:run(1.5, 0, 0, 0.4)
-  eq(s:count(E.EV_MATTY), 1, "long hang")
-  s:run(0.65, 0, -0.6, 0.4); s:run(0.6, 0, 0, 0.2); s:run(0.65, 0, -0.6, 0.6)
-  s:run(1.5, 0, 0, 0.4)
-  eq(s:count(E.EV_MATTY), 2, "slower halves")
-  eq(s:count(E.EV_CRASH), 0, "crashes")
-end)
-
-test("Matty flip with 5 Hz telemetry and 150 ms latency", function()
-  local s = Sim.new(core, config(), { attHz = 5, latency = 0.15 })
-  s:armAndHover()
-  matty(s, 0.7)
-  s:run(1.5, 0, 0, 0.4)
-  eq(s:count(E.EV_MATTY), 1, "Matty flips")
-end)
-
-test("a short pause inverted is still a back flip", function()
-  local s = Sim.new(core, config())
-  s:armAndHover()
-  matty(s, 0.15)
-  s:run(1.5, 0, 0, 0.4)
+  matty(s, 1.3, 0.6, 0.15); s:run(1.5, 0, 0, 0.4)
+  matty(s, 1.8, 0.45, 0.2); s:run(1.5, 0, 0, 0.4)
   eq(s:count(E.EV_MATTY), 0, "Matty flips")
-  eq(s:count(E.EV_BACK), 1, "back flips")
+  eq(s:count(E.EV_FRONT), 2, "front flips")
 end)
 
-test("back flips and power loops are not Matty flips", function()
+test("front flips, back flips and power loops are not Matty flips", function()
   for _, o in ipairs({ {}, { attHz = 5, latency = 0.15 }, { attHz = 10, latency = 0.05 } }) do
     local s = Sim.new(core, config(), o)
     s:armAndHover()
+    s:run(0.6, 0, 1, 0.3); s:run(1.5)                -- front flip
+    s:run(1.2, 0, 1, 0.3); s:run(1.5)                -- double front flip
     s:run(0.6, 0, -1, 0.3); s:run(1.5)               -- back flip
-    s:run(0.9, 0, -0.7, 0.3); s:run(1.5)             -- slower back flip
-    s:run(1.2, 0, -1, 0.3); s:run(1.5)               -- double back flip
     s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5) -- power loop
     s:run(1.8, 0, -0.45, 0.8); s:run(1.5, 0, 0, 0.5) -- slow power loop
     eq(s:count(E.EV_MATTY), 0, "Matty flips at " .. (o.attHz or 5) .. " Hz")
-    eq(s:count(E.EV_BACK), 3, "back flips")
+    eq(s:count(E.EV_FRONT), 2, "front flips")
+    eq(s:count(E.EV_BACK), 1, "back flips")
     eq(s:count(E.EV_LOOP), 2, "loops")
   end
+end)
+
+test("half Matty flip that ends upside down on the ground is a crash", function()
+  local s = Sim.new(core, config())
+  s:armAndHover()
+  s:run(0.65, 0, 0.6, 0.85)
+  s.locked = true
+  s:run(1.5, 0, 0, 0)
+  eq(s:count(E.EV_CRASH), 1, "crashes")
+  eq(s:count(E.EV_MATTY), 0, "Matty flips")
 end)
 
 test("hanging inverted, then a separate back flip, is a back flip", function()
@@ -559,7 +559,7 @@ test("flips, loops and Matty flips are not juicy flicks", function()
   s:run(0.6, 0, 1, 0.3); s:run(1.5)                 -- front flip
   s:run(0.6, 0, -1, 0.3); s:run(1.5)                -- back flip
   s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5)  -- power loop
-  matty(s, 0.6); s:run(1.5)
+  matty(s); s:run(1.5, 0, 0, 0.5)
   eq(s:count(E.EV_JUICY), 0, "juicy flicks")
   eq(s:count(E.EV_FRONT), 1, "front"); eq(s:count(E.EV_BACK), 1, "back")
   eq(s:count(E.EV_LOOP), 1, "loop"); eq(s:count(E.EV_MATTY), 1, "Matty")
@@ -676,7 +676,7 @@ for _, o in ipairs(OFF) do
 end
 
 test("back flips and loops off: the moves score nothing", function()
-  local s = Sim.new(core, config({ POINTS_BACKFLIP = 0, POINTS_LOOP = 0, POINTS_MATTY = 0 }))
+  local s = Sim.new(core, config({ POINTS_BACKFLIP = 0, POINTS_LOOP = 0 }))
   s:armAndHover()
   s:run(0.6, 0, -1, 0.3); s:run(1.5)
   s:run(1.3, 0, -0.6, 0.85); s:run(1.5, 0, 0, 0.5)
@@ -684,21 +684,21 @@ test("back flips and loops off: the moves score nothing", function()
   eq(s.text, "SCORE 0", "osd")
 end)
 
-test("Matty flips off: the move is a back flip again", function()
+test("Matty flips off: the move is a front flip", function()
   local s = Sim.new(core, config({ POINTS_MATTY = 0 }))
   s:armAndHover()
-  matty(s, 0.6); s:run(1.5)
+  matty(s); s:run(1.5, 0, 0, 0.5)
   eq(s:count(E.EV_MATTY), 0, "Matty flips")
-  eq(s:count(E.EV_BACK), 1, "back flips")
+  eq(s:count(E.EV_FRONT), 1, "front flips")
 end)
 
-test("back flips off, Matty flips on: Matty still scores, back flips don't", function()
-  local s = Sim.new(core, config({ POINTS_BACKFLIP = 0 }))
+test("front flips off, Matty flips on: Matty still scores, front flips don't", function()
+  local s = Sim.new(core, config({ POINTS_FRONTFLIP = 0 }))
   s:armAndHover()
-  matty(s, 0.6); s:run(1.5)
+  matty(s); s:run(1.5, 0, 0, 0.5)
   eq(s:count(E.EV_MATTY), 1, "Matty flips")
-  s:run(0.6, 0, -1, 0.3); s:run(1.5)
-  eq(s:count(E.EV_BACK) + s:count(E.EV_MISS), 0, "back flip silent")
+  s:run(0.6, 0, 1, 0.3); s:run(1.5)
+  eq(s:count(E.EV_FRONT) + s:count(E.EV_MISS), 0, "front flip silent")
   eq(s.S.score, 50, "score")
 end)
 
